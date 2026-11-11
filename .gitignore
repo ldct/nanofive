@@ -1,3 +1,2 @@
 newlib-rv32im/
-*.elf
 __pycache__/

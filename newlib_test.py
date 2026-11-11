@@ -6,23 +6,41 @@ import io, os, struct, subprocess, sys, contextlib
 # nanofive's RARS-style ecalls (see machine.ECALL): _write prints each byte
 # with a7=11, _read uses a7=12, _exit uses a7=93.
 #
-# Build newlib first (see newlib/README.md); this script then compiles
-# newlib/hello.c into newlib/hello.elf, loads its ELF segments into mem[] and
-# runs it from the ELF entry point.
+# The parts of newlib that printf & co need are vendored in newlib/vendor (see
+# newlib/README.md). This script compiles them together with newlib/hello.c into
+# newlib/hello.elf, loads its ELF segments into mem[] and runs it from the ELF
+# entry point. Without a RISC-V gcc, the checked-in newlib/hello.elf is used.
+
+import shutil, tempfile
 
 HERE     = os.path.dirname(os.path.abspath(__file__))
 SRC      = os.path.join(HERE, 'newlib')
-PREFIX   = os.path.join(HERE, 'newlib-rv32im', 'riscv64-unknown-elf')
+VENDOR   = os.path.join(SRC, 'vendor')
 MEM_SIZE = 1 << 20  # must match MEM_SIZE in newlib/link.ld
+GCC      = 'riscv64-unknown-elf-gcc'
+ARCH     = ['-march=rv32im', '-mabi=ilp32', '-mcmodel=medany', '-O2']
+INCLUDES = ['-isystem', os.path.join(VENDOR, 'build', 'targ-include'),
+            '-isystem', os.path.join(VENDOR, 'libc', 'include'),
+            '-I', os.path.join(VENDOR, 'build'), '-I', VENDOR]
+# the flags newlib's own build uses for these files
+LIBC_FLAGS = ['-D_LIBC', '-fno-builtin', '-DHAVE_CONFIG_H', '-DHAVE_NANOSLEEP',
+              '-D__SINGLE_THREAD__', '-D__NO_SYSCALLS__', '-DNO_FLOATING_POINT', '-w']
 
 def build(name):
   elf = os.path.join(SRC, name + '.elf')
-  subprocess.run(['riscv64-unknown-elf-gcc', '-march=rv32im', '-mabi=ilp32',
-    '-O2', '-nostdlib', '-nostartfiles', '-T', os.path.join(SRC, 'link.ld'),
-    '-isystem', os.path.join(PREFIX, 'include'),
-    os.path.join(SRC, 'crt0.S'), os.path.join(SRC, name + '.c'),
-    os.path.join(SRC, 'syscalls.c'),
-    os.path.join(PREFIX, 'lib', 'libc.a'), '-lgcc', '-Wl,--no-warn-rwx-segments', '-o', elf], check=True)
+  # newlib/vendor/SOURCES lists the files to compile; the rest are headers or
+  # .c files #included by them
+  libc = [os.path.join(VENDOR, f) for f in
+          open(os.path.join(VENDOR, 'SOURCES')).read().split()]
+  with tempfile.TemporaryDirectory() as tmp:
+    objs = []
+    for i, f in enumerate(libc):  # compile vendored newlib
+      o = os.path.join(tmp, '%d.o' % i); objs.append(o)
+      subprocess.run([GCC] + ARCH + INCLUDES + LIBC_FLAGS + ['-c', f, '-o', o], check=True)
+    subprocess.run([GCC] + ARCH + INCLUDES + ['-nostdlib', '-nostartfiles',
+      '-T', os.path.join(SRC, 'link.ld'), '-Wl,--no-warn-rwx-segments',
+      os.path.join(SRC, 'crt0.S'), os.path.join(SRC, name + '.c'),
+      os.path.join(SRC, 'syscalls.c')] + objs + ['-lgcc', '-o', elf], check=True)
   return elf
 
 def load_elf(m, path):
@@ -70,7 +88,10 @@ stderr too
 '''
 
 if __name__ == '__main__':
-  out, code, steps = run_elf(build('hello'))
+  have_gcc = shutil.which(GCC) is not None
+  elf = build('hello') if have_gcc else os.path.join(SRC, 'hello.elf')
+  if not have_gcc: print('(%s not found, using prebuilt %s)' % (GCC, elf))
+  out, code, steps = run_elf(elf)
   sys.stdout.write(out)
   print('exit code: %d, instructions executed: %d' % (code, steps))
   ok = out == expected and code == 3

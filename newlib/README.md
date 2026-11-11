@@ -9,9 +9,28 @@ a7=93. Floating-point printf, multithreading and files are left out.
 - `syscalls.c` — `_write/_read/_sbrk/_exit` + trivial stubs
 - `link.ld`    — flat 1 MiB memory at address 0, stack at the top
 - `hello.c`    — printf/snprintf/malloc test program
-- `../newlib_test.py` — compiles hello.c, loads the ELF, runs it, checks output
+- `hello.elf`  — prebuilt hello.c, used by the test when no RISC-V gcc is installed
+- `vendor/`    — the subset of newlib 4.4.0.20231231 sources and headers that
+  hello.c actually links (41 sources, listed in `vendor/SOURCES`; license in
+  `vendor/COPYING.NEWLIB`). `vendor/build/` holds the configure-generated
+  headers (`newlib.h`, `_newlib_version.h`, `targ-include/`).
+- `../newlib_test.py` — compiles vendor/ + hello.c, loads the ELF, runs it,
+  checks output
 
-## Build newlib (rv32im / ilp32)
+## Run
+
+    sudo apt-get install gcc-riscv64-unknown-elf   # optional
+    python3 newlib_test.py
+
+## How vendor/ was produced
+
+A full newlib was built for rv32im/ilp32 as below; hello.c was linked against
+its libc.a with `-Wl,-Map` to find the archive members used, and the sources
+of those members plus their header dependencies (from the `.deps` files) were
+copied over. To use more of libc (e.g. sscanf), build newlib like this and link
+against `$NANOFIVE/newlib-rv32im/riscv64-unknown-elf/lib/libc.a`, or vendor
+more files.
+
 
     sudo apt-get install gcc-riscv64-unknown-elf texinfo
     wget https://sourceware.org/pub/newlib/newlib-4.4.0.20231231.tar.gz
@@ -26,5 +45,3 @@ a7=93. Floating-point printf, multithreading and files are left out.
       AS_FOR_TARGET=riscv64-unknown-elf-as LD_FOR_TARGET=riscv64-unknown-elf-ld \
       CFLAGS_FOR_TARGET="-O2 -g -mcmodel=medany"
     make -j$(nproc) all-target-newlib && make install-target-newlib
-
-Then `python3 newlib_test.py`.
