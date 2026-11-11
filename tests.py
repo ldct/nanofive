@@ -1,26 +1,13 @@
-import numpy as np
 from machine import *
 # uncomment below to use the tinyfive PyPi package instead of ./machine.py
 # from tinyfive.machine import *
 
 # this file performs the following tests:
-#   1) floating point tests from the official RISC-V unit tests
-#   2) ALU instruction tests (arithmetic, logic, shift) derived from the
+#   1) ALU instruction tests (arithmetic, logic, shift) derived from the
 #      official RISC-V test suite
-#   3) a few basic load/store tests
+#   2) a few basic load/store tests
 #
 # source for (1):
-#   The official RISC-V unit tests are here:
-#   https://github.com/riscv-software-src/riscv-tests
-#   Specifically, the following files and folders have been used:
-#     isa/macros/scalar/test_macros.h : macros TEST_FP_OP*_S
-#     isa/rv64uf : testcase from various *.s files
-#   The original copyright and license notice of the RISC-V
-#   unit tests is as follows:
-#     Copyright (c) 2012-2015, The Regents of the University of California (Regents).
-#     All Rights Reserved.
-#
-# source for (2):
 #   The official RISC-V test-suite is here:
 #   https://github.com/riscv-non-isa/riscv-arch-test/blob/main/riscv-test-suite
 #   Specifically, the following files and folders have been used:
@@ -34,277 +21,40 @@ from machine import *
 m = machine(mem_size=1000)  # instantiate RISC-V machine with 1KB of memory
 
 #-------------------------------------------------------------------------------
-# functions for (1) and (2)
+# functions for (1)
 #-------------------------------------------------------------------------------
-def i32(x): return np.int32(x)   # convert to 32-bit signed
+def i32(x): return ((x + 0x80000000) & 0xffffffff) - 0x80000000  # convert to 32-bit signed
 
 def check(inst, res, correctval):
   if (res != i32(correctval)):
     print('FAIL ' + inst + ' res = ' + str(res) + ' ref = ' + str(i32(correctval)))
   return int(res != i32(correctval))
 
+# instruction name -> method, for the tests below
+INSTS = {
+  'add': m.ADD, 'sub': m.SUB, 'sll': m.SLL, 'slt': m.SLT, 'sltu': m.SLTU,
+  'xor': m.XOR, 'srl': m.SRL, 'sra': m.SRA, 'or': m.OR, 'and': m.AND,
+  'mul': m.MUL, 'mulh': m.MULH, 'mulhsu': m.MULHSU, 'mulhu': m.MULHU,
+  'div': m.DIV, 'divu': m.DIVU, 'rem': m.REM, 'remu': m.REMU,
+  'addi': m.ADDI, 'slti': m.SLTI, 'sltiu': m.SLTIU, 'xori': m.XORI,
+  'ori': m.ORI, 'andi': m.ANDI, 'slli': m.SLLI, 'srli': m.SRLI, 'srai': m.SRAI}
+
 def test_rr(m, inst, rd, rs1, rs2, correctval, val1, val2):
   """similar to TEST_RR_OP from file arch_test.h of the official test suite"""
   m.clear_cpu()
   m.x[rs1] = val1
   m.x[rs2] = val2
-  m.asm(inst,  rd, rs1, rs2)
-  m.exe(start=0, instructions=1)
+  INSTS[inst](rd, rs1, rs2)
   return check(inst, m.x[rd], correctval)
 
 def test_imm(m, inst, rd, rs1, correctval, val1, imm):
   """similar to TEST_IMM_OP from arch_test.h of the official test suite"""
   m.clear_cpu()
   m.x[rs1] = val1
-  m.asm(inst, rd, rs1, imm)
-  m.exe(start=0, instructions=1)
+  # the test suite gives some immediates as raw 12-bit fields (e.g. 0xfff for -1),
+  # so sign-extend them as the instruction encoding would
+  INSTS[inst](rd, rs1, ((imm + 0x800) & 0xfff) - 0x800)
   return check(inst, m.x[rd], correctval)
-
-""" TODO: for debug only, eventually remove it
-def debug_test_rr(m, inst, rd, rs1, rs2, correctval, val1, val2):
-  m.clear_cpu()
-  m.x[rs1] = val1
-  m.x[rs2] = val2
-  if   inst == 'add' : m.ADD (rd, rs1, rs2)
-  elif inst == 'sub' : m.SUB (rd, rs1, rs2)
-  elif inst == 'sll' : m.SLL (rd, rs1, rs2)
-  elif inst == 'slt' : m.SLT (rd, rs1, rs2)
-  elif inst == 'sltu': m.SLTU(rd, rs1, rs2)
-  elif inst == 'xor' : m.XOR (rd, rs1, rs2)
-  elif inst == 'srl' : m.SRL (rd, rs1, rs2)
-  elif inst == 'sra' : m.SRA (rd, rs1, rs2)
-  elif inst == 'or'  : m.OR  (rd, rs1, rs2)
-  elif inst == 'and' : m.AND (rd, rs1, rs2)
-  return check(inst, m.x[rd], correctval)
-
-def debug_test_imm(m, inst, rd, rs1, correctval, val1, imm):
-  m.clear_cpu()
-  m.x[rs1] = val1
-  if   inst == 'addi' : m.ADDI (rd, rs1, imm)
-  elif inst == 'slti' : m.SLTI (rd, rs1, imm)
-  elif inst == 'sltiu': m.SLTIU(rd, rs1, imm)
-  elif inst == 'xori' : m.XORI (rd, rs1, imm)
-  elif inst == 'ori'  : m.ORI  (rd, rs1, imm)
-  elif inst == 'andi' : m.ANDI (rd, rs1, imm)
-  elif inst == 'slli' : m.SLLI (rd, rs1, imm)
-  elif inst == 'srli' : m.SRLI (rd, rs1, imm)
-  elif inst == 'srai' : m.SRAI (rd, rs1, imm)
-  return check(inst, m.x[rd], correctval)
-"""
-
-#-------------------------------------------------------------------------------
-# functions for floating point
-
-def check_fp(inst, res, correctval):
-  error = not ((res == np.float32(correctval)) or
-               (np.isnan(res) and np.isnan(correctval)))
-  if error:
-    print('FAIL ' + inst + ' res = ' + str(res) + ' ref = ' +
-          str(np.float32(correctval)))
-  return int(error)
-
-def test_fp(m, inst, correctval, val1, val2=0.0, val3=0.0):
-  """similar to TEST_FP_OP*_S from isa/macros/scalar/test_macros.h"""
-  m.clear_cpu()
-  m.f[1] = val1
-  m.f[2] = val2
-  m.f[3] = val3
-  rd = 10
-  if inst in ['fmv.w.x', 'fcvt.s.w', 'fcvt.s.wu']:
-    m.x[1] = val1
-  m.asm(inst, rd, 1, 2, 3)
-  m.exe(start=0, instructions=1)
-  if inst in ['feq.s', 'fle.s', 'flt.s', 'fcvt.w.s', 'fcvt.wu.s', 'fclass.s']:
-    return check(inst, m.x[rd], correctval)
-  else:
-    return check_fp(inst, m.f[rd], correctval)
-  # TODO: add check for floating point flags, as done in TEST_FP_OP*_S
-
-""" TODO: for debug only, eventually remove it
-def debug_test_fp(m, inst, correctval, val1, val2=0.0, val3=0.0):
-  m.clear_cpu()
-  m.f[1] = val1
-  m.f[2] = val2
-  m.f[3] = val3
-  rd = 10
-  if inst in ['fmv.w.x', 'fcvt.s.w', 'fcvt.s.wu']:
-    m.x[1] = val1
-  if   inst == 'fadd.s'   : m.FADD_S   (rd, 1, 2)
-  elif inst == 'fsub.s'   : m.FSUB_S   (rd, 1, 2)
-  elif inst == 'fmul.s'   : m.FMUL_S   (rd, 1, 2)
-  elif inst == 'fdiv.s'   : m.FDIV_S   (rd, 1, 2)
-  elif inst == 'fsqrt.s'  : m.FSQRT_S  (rd, 1)
-  elif inst == 'fmin.s'   : m.FMIN_S   (rd, 1, 2)
-  elif inst == 'fmax.s'   : m.FMAX_S   (rd, 1, 2)
-  elif inst == 'fmadd.s'  : m.FMADD_S  (rd, 1, 2, 3)
-  elif inst == 'fmsub.s'  : m.FMSUB_S  (rd, 1, 2, 3)
-  elif inst == 'fnmadd.s' : m.FNMADD_S (rd, 1, 2, 3)
-  elif inst == 'fnmsub.s' : m.FNMSUB_S (rd, 1, 2, 3)
-  elif inst == 'feq.s'    : m.FEQ_S    (rd, 1, 2)
-  elif inst == 'fle.s'    : m.FLE_S    (rd, 1, 2)
-  elif inst == 'flt.s'    : m.FLT_S    (rd, 1, 2)
-  elif inst == 'fcvt.s.w' : m.FCVT_S_W (rd, 1)
-  elif inst == 'fcvt.s.wu': m.FCVT_S_WU(rd, 1)
-  elif inst == 'fcvt.w.s' : m.FCVT_W_S (rd, 1)
-  elif inst == 'fcvt.wu.s': m.FCVT_WU_S(rd, 1)
-  elif inst == 'fclass.s' : m.FCLASS_S (rd, 1)
-  if inst in ['feq.s', 'fle.s', 'flt.s', 'fcvt.w.s', 'fcvt.wu.s', 'fclass.s']:
-    return check(inst, m.x[rd], correctval)
-  else:
-    return check_fp(inst, m.f[rd], correctval)
-"""
-qNaN = m.b2f(0x7fc00000)
-sNaN = m.b2f(0x7f800001)
-NaN  = np.nan
-
-#-------------------------------------------------------------------------------
-# floating point unit tests
-#-------------------------------------------------------------------------------
-
-# fadd, fsub, fmul
-err = 0
-err += test_fp(m, 'fadd.s',           3.5,        2.5,        1.0)
-err += test_fp(m, 'fadd.s',         -1234,    -1235.1,        1.1)
-err += test_fp(m, 'fadd.s',    3.14159265, 3.14159265, 0.00000001)
-err += test_fp(m, 'fsub.s',           1.5,        2.5,        1.0)
-err += test_fp(m, 'fsub.s',         -1234,    -1235.1,       -1.1)
-err += test_fp(m, 'fsub.s',    3.14159265, 3.14159265, 0.00000001)
-err += test_fp(m, 'fmul.s',           2.5,        2.5,        1.0)
-err += test_fp(m, 'fmul.s',       1358.61,    -1235.1,       -1.1)
-err += test_fp(m, 'fmul.s', 3.14159265e-8, 3.14159265, 0.00000001)
-err += test_fp(m, 'fsub.s',        np.nan,     np.inf,     np.inf)
-
-# fmin, fmax
-# TODO: fix the tests that are commented out below
-err += test_fp(m, 'fmin.s',        1.0,        2.5,        1.0)
-err += test_fp(m, 'fmin.s',    -1235.1,    -1235.1,        1.1)
-err += test_fp(m, 'fmin.s',    -1235.1,        1.1,    -1235.1)
-#err+= test_fp(m, 'fmin.s',    -1235.1,        NaN,    -1235.1)
-err += test_fp(m, 'fmin.s', 0.00000001, 3.14159265, 0.00000001)
-err += test_fp(m, 'fmin.s',       -2.0,       -1.0,       -2.0)
-err += test_fp(m, 'fmax.s',        2.5,        2.5,        1.0)
-err += test_fp(m, 'fmax.s',        1.1,    -1235.1,        1.1)
-err += test_fp(m, 'fmax.s',        1.1,        1.1,    -1235.1)
-#err+= test_fp(m, 'fmax.s',    -1235.1,        NaN,    -1235.1)
-err += test_fp(m, 'fmax.s', 3.14159265, 3.14159265, 0.00000001)
-err += test_fp(m, 'fmax.s',       -1.0,       -1.0,       -2.0)
-#err+= test_fp(m, 'fmax.s',        1.0,       sNaN,        1.0)
-err += test_fp(m, 'fmax.s',       qNaN,        NaN,        NaN)
-err += test_fp(m, 'fmin.s',       -0.0,       -0.0,        0.0)
-err += test_fp(m, 'fmin.s',       -0.0,        0.0,       -0.0)
-err += test_fp(m, 'fmax.s',        0.0,       -0.0,        0.0)
-err += test_fp(m, 'fmax.s',        0.0,        0.0,       -0.0)
-
-# fdiv, fsqrt
-err += test_fp(m, 'fdiv.s',  1.1557273520668288, 3.14159265, 2.71828182)
-err += test_fp(m, 'fdiv.s', -0.9991093838555584,      -1234,     1235.1)
-err += test_fp(m, 'fdiv.s',          3.14159265, 3.14159265,        1.0)
-err += test_fp(m, 'fsqrt.s', 1.7724538498928541, 3.14159265)
-err += test_fp(m, 'fsqrt.s',                100,      10000)
-err += test_fp(m, 'fsqrt.s',                NaN,       -1.0)
-err += test_fp(m, 'fsqrt.s',          13.076696,      171.0)
-
-# fmadd, fnmadd, fmsub, fnmsub
-err += test_fp(m, 'fmadd.s',      3.5,  1.0,        2.5,        1.0)
-err += test_fp(m, 'fmadd.s',   1236.2, -1.0,    -1235.1,        1.1)
-err += test_fp(m, 'fmadd.s',    -12.0,  2.0,       -5.0,       -2.0)
-err += test_fp(m, 'fnmadd.s',    -3.5,  1.0,        2.5,        1.0)
-err += test_fp(m, 'fnmadd.s', -1236.2, -1.0,    -1235.1,        1.1)
-err += test_fp(m, 'fnmadd.s',    12.0,  2.0,       -5.0,       -2.0)
-err += test_fp(m, 'fmsub.s',      1.5,  1.0,        2.5,        1.0)
-err += test_fp(m, 'fmsub.s',     1234, -1.0,    -1235.1,        1.1)
-err += test_fp(m, 'fmsub.s',     -8.0,  2.0,       -5.0,       -2.0)
-err += test_fp(m, 'fnmsub.s',    -1.5,  1.0,        2.5,        1.0)
-err += test_fp(m, 'fnmsub.s',   -1234, -1.0,    -1235.1,        1.1)
-err += test_fp(m, 'fnmsub.s',     8.0,  2.0,       -5.0,       -2.0)
-
-# flw and fsw (adopted from isa/rv32uf/ldst.S)
-def test_flw_fsw(m, tdat, tdat_offset):
-  m.clear_cpu()
-  m.x[a1] = tdat
-  m.asm('flw.s', f1, tdat_offset, a1)
-  m.asm('fsw.s', f1, 20, a1)
-  m.asm('lw',    a0, 20, a1)
-  m.exe(start=0, instructions=3)
-  ref = m.read_i32(tdat+tdat_offset)
-  return check('flw/fsw', m.x[a0], ref)
-
-tdat = 500  # write testdata to address 500
-m.write_i32(0xbf800000, tdat)
-m.write_i32(0x40000000, tdat+4)
-err += test_flw_fsw(m, tdat, 4)
-err += test_flw_fsw(m, tdat, 0)
-
-# feq, fle, flt
-err += test_fp(m, 'feq.s', 1, -1.36, -1.36)
-err += test_fp(m, 'fle.s', 1, -1.36, -1.36)
-err += test_fp(m, 'flt.s', 0, -1.36, -1.36)
-err += test_fp(m, 'feq.s', 0, -1.37, -1.36)
-err += test_fp(m, 'fle.s', 1, -1.37, -1.36)
-err += test_fp(m, 'flt.s', 1, -1.37, -1.36)
-err += test_fp(m, 'feq.s', 0, NaN, 0)
-err += test_fp(m, 'feq.s', 0, NaN, NaN)
-err += test_fp(m, 'feq.s', 0, sNaN, 0)
-err += test_fp(m, 'flt.s', 0, NaN, 0)
-err += test_fp(m, 'flt.s', 0, NaN, NaN)
-err += test_fp(m, 'flt.s', 0, sNaN, 0)
-err += test_fp(m, 'fle.s', 0, NaN, 0)
-err += test_fp(m, 'fle.s', 0, NaN, NaN)
-err += test_fp(m, 'fle.s', 0, sNaN, 0)
-
-# fcvt
-err += test_fp(m, 'fcvt.s.w',           2.0,  2)
-err += test_fp(m, 'fcvt.s.w',          -2.0, -2)
-err += test_fp(m, 'fcvt.s.wu',          2.0,  2)
-err += test_fp(m, 'fcvt.s.wu',  4.2949673e9, -2)
-err += test_fp(m, 'fcvt.w.s',          -1, -1.1)
-err += test_fp(m, 'fcvt.w.s',          -1, -1.0)
-err += test_fp(m, 'fcvt.w.s',           0, -0.9)
-err += test_fp(m, 'fcvt.w.s',           0,  0.9)
-err += test_fp(m, 'fcvt.w.s',           1,  1.0)
-err += test_fp(m, 'fcvt.w.s',           1,  1.1)
-err += test_fp(m, 'fcvt.w.s',      -1<<31, -3e9)
-err += test_fp(m, 'fcvt.w.s',   (1<<31)-1,  3e9)
-err += test_fp(m, 'fcvt.wu.s',          0, -3.0)
-err += test_fp(m, 'fcvt.wu.s',          0, -1.0)
-err += test_fp(m, 'fcvt.wu.s',          0, -0.9)
-err += test_fp(m, 'fcvt.wu.s',          0,  0.9)
-err += test_fp(m, 'fcvt.wu.s',          1,  1.0)
-err += test_fp(m, 'fcvt.wu.s',          1,  1.1)
-err += test_fp(m, 'fcvt.wu.s',          0, -3e9)
-err += test_fp(m, 'fcvt.wu.s', 3000000000,  3e9)
-
-# fmv, fsgnj
-def test_fsgn(inst, new_sign, rs1_sign, rs2_sign):
-  ref = 0x12345678 | (-new_sign << 31)
-  m.clear_cpu()
-  m.x[a1] = (rs1_sign << 31) | 0x12345678
-  m.x[a2] = -rs2_sign
-  m.asm('fmv.w.x', f1, a1)
-  m.asm('fmv.w.x', f2, a2)
-  m.asm(inst,      f0, f1, f2)
-  m.asm('fmv.x.w', a0, f0)
-  m.exe(start=0, instructions=4)
-  return check('fmv/fsgnj', m.x[a0], ref)
-
-err += test_fsgn('fsgnj.s', 0, 0, 0)
-err += test_fsgn('fsgnj.s', 1, 0, 1)
-err += test_fsgn('fsgnj.s', 0, 1, 0)
-err += test_fsgn('fsgnj.s', 1, 1, 1)
-
-# fclass
-err += test_fp(m, 'fclass.s', 1 << 0, m.b2f(0xff800000))
-err += test_fp(m, 'fclass.s', 1 << 1, m.b2f(0xbf800000))
-err += test_fp(m, 'fclass.s', 1 << 2, m.b2f(0x807fffff))
-err += test_fp(m, 'fclass.s', 1 << 3, m.b2f(0x80000000))
-err += test_fp(m, 'fclass.s', 1 << 4, m.b2f(0x00000000))
-err += test_fp(m, 'fclass.s', 1 << 5, m.b2f(0x007fffff))
-err += test_fp(m, 'fclass.s', 1 << 6, m.b2f(0x3f800000))
-err += test_fp(m, 'fclass.s', 1 << 7, m.b2f(0x7f800000))
-err += test_fp(m, 'fclass.s', 1 << 8, m.b2f(0x7f800001))
-err += test_fp(m, 'fclass.s', 1 << 9, m.b2f(0x7fc00000))
-
-print('FP-tests errors: ' + str(err))
 
 #-------------------------------------------------------------------------------
 # test ALU instructions
@@ -913,6 +663,69 @@ err += test_rr(m, 'remu', x19, x0, x17, 0x0, 0x0, 0x1000)
 print('ALU-tests errors: ' + str(err))
 
 #-------------------------------------------------------------------------------
+# run a program from memory (covers decoding, branches, jumps, loads, stores)
+#-------------------------------------------------------------------------------
+prog = [
+  0x00a00293,  #  0: addi  t0, x0, 10
+  0x00000513,  #  4: addi  a0, x0, 0
+  0x00550533,  #  8: add   a0, a0, t0      <- loop: a0 = 10 + 9 + ... + 1
+  0xfff28293,  # 12: addi  t0, t0, -1
+  0xfe029ce3,  # 16: bne   t0, x0, loop
+  0x05c000ef,  # 20: jal   ra, func        (a1 = 3 * a0)
+  0xdeadc637,  # 24: lui   a2, 0xdeadc
+  0xeef60613,  # 28: addi  a2, a2, -273    (a2 = 0xdeadbeef)
+  0x0cc02423,  # 32: sw    a2, 200(x0)
+  0x0c800683,  # 36: lb    a3, 200(x0)
+  0x0c804703,  # 40: lbu   a4, 200(x0)
+  0x0ca01783,  # 44: lh    a5, 202(x0)
+  0x0ca05803,  # 48: lhu   a6, 202(x0)
+  0x0ca01923,  # 52: sh    a0, 210(x0)
+  0x0cc00aa3,  # 56: sb    a2, 213(x0)
+  0x0d202883,  # 60: lw    a7, 210(x0)
+  0xfffc1917,  # 64: auipc s2, -63
+  0xfff00313,  # 68: addi  t1, x0, -1
+  0x00a36463,  # 72: bltu  t1, a0, bad     (not taken)
+  0x00a34663,  # 76: blt   t1, a0, ok1     (taken)
+  0x06300993,  # 80: addi  s3, x0, 99      <- bad
+  0x0280006f,  # 84: jal   x0, end
+  0x00a37463,  # 88: bgeu  t1, a0, ok2     <- ok1 (taken)
+  0xff5ff06f,  # 92: jal   x0, bad
+  0x00655463,  # 96: bge   a0, t1, ok3     <- ok2 (taken)
+  0xfedff06f,  #100: jal   x0, bad
+  0x00100993,  #104: addi  s3, x0, 1       <- ok3
+  0x0100006f,  #108: jal   x0, end
+  0x00251593,  #112: slli  a1, a0, 2       <- func
+  0x40a585b3,  #116: sub   a1, a1, a0
+  0x00008067]  #120: jalr  x0, ra, 0       (return)
+               #124: end
+
+m.clear_cpu()
+m.clear_mem()
+m.write_i32_vec(prog, 0)
+m.run(start=0, end=124)
+err = 0
+err += check('program a0', m.x[a0], 55)
+err += check('program a1', m.x[a1], 165)
+err += check('program a2', m.x[a2], 0xdeadbeef)
+err += check('program a3', m.x[a3], -0x11)        # 0xef sign-extended
+err += check('program a4', m.x[a4], 0xef)
+err += check('program a5', m.x[a5], -0x2153)      # 0xdead sign-extended
+err += check('program a6', m.x[a6], 0xdead)
+err += check('program a7', m.x[a7], 0xef000037)   # bytes 0x37, 0x00, 0x00, 0xef
+err += check('program s2', m.x[s2], 64 - (63 << 12))
+err += check('program s3', m.x[s3], 1)            # took the right branches
+
+# unsupported instructions (here: fadd.s from the F-extension) raise an error
+m.write_i32(0x002080d3, 0)
+try:
+  m.run(start=0, steps=1)
+  err += check('unsupported instruction raises', 0, 1)
+except ValueError:
+  pass
+
+print('program-tests errors: ' + str(err))
+
+#-------------------------------------------------------------------------------
 # some basic tests for load/store instructions
 #-------------------------------------------------------------------------------
 #m.mem[7]  = -7;  m.mem[8]  = -8; m.mem[9]  = -9; m.mem[10] = 10
@@ -924,6 +737,3 @@ print('ALU-tests errors: ' + str(err))
 #m.SH(2, 1, 9); print(m.mem[10]); print(_i8(m.mem[11]))
 # TODO: improve these tests, they should be self-checking; or just replace them
 # by the official RISC-V test-suite or unit tests
-
-# TODO: execute already compiled hex-files tests from
-# https://github.com/ucb-bar/riscv-mini/blob/main/tests/rv32ui-p-add.hex
