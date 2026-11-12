@@ -1,0 +1,34 @@
+
+This is ratpoints-2.2.4 Copyright (C) 2008,2009,2022,2023,2026 by Michael Stoll.
+
+This program comes with ABSOLUTELY NO WARRANTY.
+This is free software, and you are welcome to redistribute it under the
+terms of the GNU General Public License version 2 or later.
+
+Please acknowledge use of this program in published work.
+
+
+
+Curve equation is  y^2 = x^6 + x^4 - 3 x^2 + 1
+
+max. Height = 50
+
+(1 : 1 : 0)
+(1 : -1 : 0)
+(-3 : 28 : 1)
+(-3 : -28 : 1)
+(-1 : 0 : 1)
+(0 : 1 : 1)
+(0 : -1 : 1)
+(1 : 0 : 1)
+(3 : 28 : 1)
+(3 : -28 : 1)
+
+
+11 primes used for first stage of sieving,
+19 primes used for both stages of sieving together.
+Search intervals:
+[-50.000000, -1.000000] U [-0.644531, 0.644531] U [1.000000, 50.000000]
+
+10 rational points found.
+

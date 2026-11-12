@@ -1,0 +1,33 @@
+
+This is ratpoints-2.2.4 Copyright (C) 2008,2009,2022,2023,2026 by Michael Stoll.
+
+This program comes with ABSOLUTELY NO WARRANTY.
+This is free software, and you are welcome to redistribute it under the
+terms of the GNU General Public License version 2 or later.
+
+Please acknowledge use of this program in published work.
+
+
+
+Curve equation is  y^2 = x^5 - 3 x^3 + 1
+
+max. Height = 100
+
+(1 : 0 : 0)
+(0 : 1 : 1)
+(0 : -1 : 1)
+(2 : 3 : 1)
+(2 : -3 : 1)
+(4 : 633 : 9)
+(4 : -633 : 9)
+
+
+11 primes used for first stage of sieving,
+19 primes used for both stages of sieving together.
+(Reversed) polynomial is +-monic of odd degree:
+  could restrict denominators to squares.
+Search intervals:
+[-1.789062, 0.742188] U [1.664062, 100.000000]
+
+7 rational points found.
+

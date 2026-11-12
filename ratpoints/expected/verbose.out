@@ -1,0 +1,52 @@
+
+This is ratpoints-2.2.4 Copyright (C) 2008,2009,2022,2023,2026 by Michael Stoll.
+
+This program comes with ABSOLUTELY NO WARRANTY.
+This is free software, and you are welcome to redistribute it under the
+terms of the GNU General Public License version 2 or later.
+
+Please acknowledge use of this program in published work.
+
+
+
+Curve equation is  y^2 = 7 x^6 + 6 x^5 + 5 x^4 + 4 x^3 + 3 x^2 + 2 x + 1
+
+
+find_points:
+  degree:       6
+  coefficients: 1 2 3 4 5 6 7
+  height bound: 10
+  denominators from 1 to 10
+  number of primes to consider:      30
+  number of primes for sieving:      19
+  number of primes for first stage:  11
+  maximal number of `forbidden divisors': 30
+  iterations for isolations of connected components: 10
+
+Check if polynomial should be reversed for better performance:
+  criteria are not met ==> don't reverse
+
+Isolate the connected components:
+  can restrict to the following intervals:
+  [-10.000000, 10.000000] 
+
+Obtain information from the polynomial mod 16:
+  use all numerators for odd denominators
+
+Find the points mod p for the first 30 odd primes p:
+  use 11 primes for first stage:
+    67 89 53 73 107 83 59 43 37 17 31
+  use 8 primes for second stage:
+    71 127 61 101 97 79 23 103
+
+Now start the sieving procedure...
+
+(-1 : 2 : 1)
+(-1 : -2 : 1)
+(0 : 1 : 1)
+(0 : -1 : 1)
+(8 : 2401 : 7)
+(8 : -2401 : 7)
+
+6 rational points found.
+
