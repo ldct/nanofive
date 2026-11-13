@@ -1,3 +1,4 @@
 newlib-rv32im/
 __pycache__/
 ratpoints/build/
+lean/.lake/

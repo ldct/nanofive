@@ -1,0 +1,9 @@
+name = "tinyfive"
+defaultTargets = ["TinyFive", "abc101a"]
+
+[[lean_lib]]
+name = "TinyFive"
+
+[[lean_exe]]
+name = "abc101a"
+root = "Main"
