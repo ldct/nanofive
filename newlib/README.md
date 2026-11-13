@@ -9,13 +9,17 @@ a7=93. Floating-point printf, multithreading and files are left out.
 - `syscalls.c` — `_write/_read/_sbrk/_exit` + trivial stubs
 - `link.ld`    — flat 1 MiB memory at address 0, stack at the top
 - `hello.c`    — printf/snprintf/malloc test program
-- `hello.elf`  — prebuilt hello.c, used by the test when no RISC-V gcc is installed
+- `hello.elf`  — prebuilt hello.c for rv32im/ilp32, used by the test when no
+  RISC-V gcc is installed
+- `hello64.elf` — the same for rv64im/lp64 (runs on `machine64`). The vendored
+  sources and the configure-generated headers in `vendor/build/` (made for
+  rv32im) also compile as-is for rv64im/lp64
 - `vendor/`    — the subset of newlib 4.4.0.20231231 sources and headers that
   hello.c actually links (41 sources, listed in `vendor/SOURCES`; license in
   `vendor/COPYING.NEWLIB`). `vendor/build/` holds the configure-generated
   headers (`newlib.h`, `_newlib_version.h`, `targ-include/`).
-- `../newlib_test.py` — compiles vendor/ + hello.c, loads the ELF, runs it,
-  checks output
+- `../newlib_test.py` — compiles vendor/ + hello.c for RV32 and RV64, loads
+  each ELF into the matching machine, runs it, checks output
 
 ## Run
 

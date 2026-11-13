@@ -1,4 +1,4 @@
-# NanoFive - a RISC-V RV32IM emulator, forked from https://github.com/OpenMachine-ai/tinyfive?
+# NanoFive - a RISC-V RV32IM / RV64IM emulator, forked from https://github.com/OpenMachine-ai/tinyfive?
 
 # Each instruction is a method that
 # updates the CPU state (registers x[], memory mem[], program counter pc).
@@ -8,19 +8,32 @@
 import sys
 
 def _i32(v): return ((v + 0x80000000) & 0xffffffff) - 0x80000000  # wrap to int32
+def _i64(v): return ((v + 2**63) & (2**64 - 1)) - 2**63               # wrap to int64
 
 class _xregs(list):
   def __setitem__(s, i, v): super().__setitem__(i, _i32(v))
 
+class _xregs64(list):
+  def __setitem__(s, i, v): super().__setitem__(i, _i64(v))
+
+# 'machine' is RV32IM. Everything that depends on the register width XLEN goes
+# through the class attributes below, so that 'machine64' (RV64IM, further down)
+# only has to override them and add the RV64-only instructions.
 class machine:
+  XLEN     = 32
+  MASK     = 2**32 - 1   # XLEN-bit unsigned mask
+  SHMASK   = 0x1f        # shift amounts use the low log2(XLEN) bits
+  SHAMT_HI = 0           # bit of funct7 that belongs to shamt (RV64: bit 25)
+  XREGS    = _xregs      # regfile type, wraps every write to XLEN bits
+
   def __init__(s, mem_size):
     s.mem = bytearray(mem_size)   # memory 'mem[]' is unsigned int8
-    s.x   = _xregs([0] * 32)      # regfile 'x[]' is signed int32
-    s.pc  = 0                     # program counter (PC) is uint32
+    s.x   = s.XREGS([0] * 32)     # regfile 'x[]' is signed intXLEN
+    s.pc  = 0                     # program counter (PC) is uintXLEN
     s.halted = False              # set by the exit system call
 
   def i8(s,x): return ((x + 0x80) & 0xff) - 0x80  # convert to 8-bit signed
-  def u (s,x): return x & 0xffffffff              # convert to 32-bit unsigned
+  def u (s,x): return x & s.MASK                  # convert to XLEN-bit unsigned
 
   def ipc(s, incr=4):
     """increment pc by 'incr' and make sure that x[0] is always 0"""
@@ -43,11 +56,10 @@ class machine:
   def AND (s,rd,rs1,rs2): s.x[rd] = s.x[rs1] & s.x[rs2]; s.ipc()
   def ANDI(s,rd,rs1,imm): s.x[rd] = s.x[rs1] & imm;      s.ipc()
 
-  # shift (note: 0x1f ensures that only the 5 LSBs are used as shift-amount)
-  # (For rv64, we would use the 6 LSBs, so 0x3f)
-  def SLL (s,rd,rs1,rs2): s.x[rd] = s.x[rs1]      << (s.x[rs2] & 0x1f); s.ipc()
-  def SRA (s,rd,rs1,rs2): s.x[rd] = s.x[rs1]      >> (s.x[rs2] & 0x1f); s.ipc()
-  def SRL (s,rd,rs1,rs2): s.x[rd] = s.u(s.x[rs1]) >> (s.x[rs2] & 0x1f); s.ipc()
+  # shift (SHMASK: only the 5 LSBs (RV32) or 6 LSBs (RV64) are the shift-amount)
+  def SLL (s,rd,rs1,rs2): s.x[rd] = s.x[rs1]      << (s.x[rs2] & s.SHMASK); s.ipc()
+  def SRA (s,rd,rs1,rs2): s.x[rd] = s.x[rs1]      >> (s.x[rs2] & s.SHMASK); s.ipc()
+  def SRL (s,rd,rs1,rs2): s.x[rd] = s.u(s.x[rs1]) >> (s.x[rs2] & s.SHMASK); s.ipc()
   def SLLI(s,rd,rs1,imm): s.x[rd] = s.x[rs1]      << imm;               s.ipc()
   def SRAI(s,rd,rs1,imm): s.x[rd] = s.x[rs1]      >> imm;               s.ipc()
   def SRLI(s,rd,rs1,imm): s.x[rd] = s.u(s.x[rs1]) >> imm;               s.ipc()
@@ -70,9 +82,9 @@ class machine:
   def JAL (s,rd,imm): s.x[rd] = s.pc + 4; s.ipc(imm)
   def JALR(s,rd,rs1,imm): t = s.pc + 4; s.pc = s.u(s.x[rs1] + imm) & ~1; s.x[rd] = t; s.x[0] = 0
 
-  # load immediate
-  def LUI  (s,rd,imm): s.x[rd] = imm << 12;          s.ipc()
-  def AUIPC(s,rd,imm): s.x[rd] = s.pc + (imm << 12); s.ipc()
+  # load immediate (the 32-bit value imm << 12 is sign-extended to XLEN bits)
+  def LUI  (s,rd,imm): s.x[rd] =        _i32(imm << 12); s.ipc()
+  def AUIPC(s,rd,imm): s.x[rd] = s.pc + _i32(imm << 12); s.ipc()
 
   # Edge case: addresses are not checked for alignment, and a negative address
   # (rs1 + offset < 0) silently indexes from the end of mem[] (Python indexing)
@@ -136,17 +148,17 @@ class machine:
   #-------------------------------------------------------------------------------
   # M-extension (RV32M)
   def MUL   (s,rd,rs1,rs2): s.x[rd] =      s.x[rs1]  *     s.x[rs2];         s.ipc()
-  def MULH  (s,rd,rs1,rs2): s.x[rd] =     (s.x[rs1]  *     s.x[rs2])  >> 32; s.ipc()
-  def MULHSU(s,rd,rs1,rs2): s.x[rd] =     (s.x[rs1]  * s.u(s.x[rs2])) >> 32; s.ipc()
-  def MULHU (s,rd,rs1,rs2): s.x[rd] = (s.u(s.x[rs1]) * s.u(s.x[rs2])) >> 32; s.ipc()
+  def MULH  (s,rd,rs1,rs2): s.x[rd] =     (s.x[rs1]  *     s.x[rs2])  >> s.XLEN; s.ipc()
+  def MULHSU(s,rd,rs1,rs2): s.x[rd] =     (s.x[rs1]  * s.u(s.x[rs2])) >> s.XLEN; s.ipc()
+  def MULHU (s,rd,rs1,rs2): s.x[rd] = (s.u(s.x[rs1]) * s.u(s.x[rs2])) >> s.XLEN; s.ipc()
 
   # RISC-V division rounds toward zero, while Python's '//' rounds toward -inf,
   # so divide the magnitudes and fix up the sign.
   # Edge cases (as the spec requires, division never traps):
   #   - division by zero: quotient is -1 (all ones, i.e. 0xffffffff for DIVU) and
   #     remainder is the dividend
-  #   - signed overflow -2**31 / -1: quotient is 2**31, which the regfile wraps
-  #     back to -2**31; remainder is 0
+  #   - signed overflow -2**(XLEN-1) / -1: quotient is 2**(XLEN-1), which the
+  #     regfile wraps back to -2**(XLEN-1); remainder is 0
   def div(s,a,b):
     if b == 0: return -1
     q = abs(a) // abs(b)
@@ -172,10 +184,13 @@ class machine:
         (6, 0x00): OR, (7, 0x00): AND,
         (0, 0x01): MUL, (1, 0x01): MULH, (2, 0x01): MULHSU, (3, 0x01): MULHU,
         (4, 0x01): DIV, (5, 0x01): DIVU, (6, 0x01): REM, (7, 0x01): REMU}
+  # RV64-only opcodes OP-IMM-32 (0x1b) and OP-32 (0x3b), filled in by machine64
+  OP_IMM_32 = {}
+  OP_32     = {}
 
   def step(s):
     """execute the instruction at address pc"""
-    w = s.u(s.read_i32(s.pc))
+    w = s.read_i32(s.pc) & 0xffffffff  # instructions are 32 bits wide
     op, rd, f3 = w & 0x7f, (w >> 7) & 0x1f, (w >> 12) & 0x7
     rs1, rs2, f7 = (w >> 15) & 0x1f, (w >> 20) & 0x1f, w >> 25
     def sext(v, bits): return v - (1 << bits) if v >> (bits - 1) else v
@@ -195,8 +210,13 @@ class machine:
     elif op == 0x03 and f3 in s.LOAD:   s.LOAD[f3]  (s, rd,  imm_i, rs1)
     elif op == 0x23 and f3 in s.STORE:  s.STORE[f3] (s, rs2, imm_s, rs1)
     elif op == 0x13 and f3 not in (1, 5): s.OP_IMM[f3](s, rd, rs1, imm_i)
-    elif op == 0x13 and (f3, f7) in s.SHIFT_IMM: s.SHIFT_IMM[f3, f7](s, rd, rs1, rs2)
+    # shift-immediates: RV64 takes bit 25 (the lsb of funct7) as shamt[5]
+    elif op == 0x13 and (f3, f7 & ~s.SHAMT_HI) in s.SHIFT_IMM:
+      s.SHIFT_IMM[f3, f7 & ~s.SHAMT_HI](s, rd, rs1, (w >> 20) & s.SHMASK)
     elif op == 0x33 and (f3, f7) in s.OP:        s.OP[f3, f7]       (s, rd, rs1, rs2)
+    elif op == 0x1b and (f3, f7 if f3 in (1, 5) else 0) in s.OP_IMM_32:
+      s.OP_IMM_32[f3, f7 if f3 in (1, 5) else 0](s, rd, rs1, rs2 if f3 in (1, 5) else imm_i)
+    elif op == 0x3b and (f3, f7) in s.OP_32:     s.OP_32[f3, f7]    (s, rd, rs1, rs2)
     elif w == 0x00000073: s.ECALL()
     else: raise ValueError('unsupported instruction %08x at pc %d' % (w, s.pc))
 
@@ -251,7 +271,7 @@ class machine:
   # useful functions for accessing state and memory
 
   def clear_cpu(s):
-    s.x = _xregs([0] * 32)
+    s.x = s.XREGS([0] * 32)
     s.pc = 0
     s.halted = False
     # TODO: add an option that initializes all registers with random data so we
@@ -275,13 +295,82 @@ class machine:
   def mem_dump(s, start, size):
     """for debug: dump memory from byteaddress 'start', dump out 'size' bytes"""
     for i in range(start, start + size, 4):
-      print('%08x' % s.u(s.read_i32(i)))
+      print('%08x' % (s.read_i32(i) & 0xffffffff))
 
   def dump_state(s):
     print('pc   : %4d' % s.pc)
     for i in range(0, 32, 4):
       print('x[%2d]: %4d, x[%2d]: %4d, x[%2d]: %4d, x[%2d]: %4d' %
             (i, s.x[i], i+1, s.x[i+1], i+2, s.x[i+2], i+3, s.x[i+3]))
+
+#---------------------------------------------------------------------------------
+# RV64IM: registers, pc and shifts are 64 bits wide; adds the 64-bit loads and
+# stores and the '*W' instructions, which compute on the low 32 bits of their
+# operands and sign-extend the 32-bit result to 64 bits
+#---------------------------------------------------------------------------------
+class machine64(machine):
+  XLEN     = 64
+  MASK     = 2**64 - 1
+  SHMASK   = 0x3f
+  SHAMT_HI = 1
+  XREGS    = _xregs64
+
+  def u32(s,x): return x & 0xffffffff  # low 32 bits, unsigned
+
+  # loads and stores (same edge cases as LW/SW)
+  def LWU(s,rd,imm,rs1): s.x[rd] = s.u32(s.read_i32(s.x[rs1] + imm)); s.ipc()
+  def LD (s,rd,imm,rs1): s.x[rd] =       s.read_i64(s.x[rs1] + imm);  s.ipc()
+  def SD (s,rs2,imm,rs1): s.write_i64(s.x[rs2], s.x[rs1] + imm);      s.ipc()
+
+  # 32-bit arithmetic (shift amounts are 5 bits, as on RV32)
+  def ADDIW(s,rd,rs1,imm): s.x[rd] = _i32(s.x[rs1] + imm);                 s.ipc()
+  def SLLIW(s,rd,rs1,imm): s.x[rd] = _i32(s.x[rs1] << imm);                s.ipc()
+  def SRLIW(s,rd,rs1,imm): s.x[rd] = _i32(s.u32(s.x[rs1]) >> imm);         s.ipc()
+  def SRAIW(s,rd,rs1,imm): s.x[rd] = _i32(s.x[rs1]) >> imm;                s.ipc()
+  def ADDW (s,rd,rs1,rs2): s.x[rd] = _i32(s.x[rs1] + s.x[rs2]);            s.ipc()
+  def SUBW (s,rd,rs1,rs2): s.x[rd] = _i32(s.x[rs1] - s.x[rs2]);            s.ipc()
+  def SLLW (s,rd,rs1,rs2): s.x[rd] = _i32(s.x[rs1] << (s.x[rs2] & 0x1f));  s.ipc()
+  def SRLW (s,rd,rs1,rs2): s.x[rd] = _i32(s.u32(s.x[rs1]) >> (s.x[rs2] & 0x1f)); s.ipc()
+  def SRAW (s,rd,rs1,rs2): s.x[rd] = _i32(s.x[rs1]) >> (s.x[rs2] & 0x1f);  s.ipc()
+
+  # 32-bit M-extension (RV64M); same division edge cases as DIV/REM, at 32 bits
+  def MULW (s,rd,rs1,rs2): s.x[rd] = _i32(s.x[rs1] * s.x[rs2]);                         s.ipc()
+  def DIVW (s,rd,rs1,rs2): s.x[rd] = _i32(s.div(_i32(s.x[rs1]),  _i32(s.x[rs2])));       s.ipc()
+  def DIVUW(s,rd,rs1,rs2): s.x[rd] = _i32(s.div(s.u32(s.x[rs1]), s.u32(s.x[rs2])));      s.ipc()
+  def REMW (s,rd,rs1,rs2): s.x[rd] = _i32(s.rem(_i32(s.x[rs1]),  _i32(s.x[rs2])));       s.ipc()
+  def REMUW(s,rd,rs1,rs2): s.x[rd] = _i32(s.rem(s.u32(s.x[rs1]), s.u32(s.x[rs2])));      s.ipc()
+
+  # decode tables (see the RV64I/RV64M chapters of the spec); OP_IMM_32 shifts
+  # are keyed by (funct3, funct7), ADDIW by (0, 0)
+  LOAD  = {**machine.LOAD,  3: LD, 6: LWU}
+  STORE = {**machine.STORE, 3: SD}
+  OP_IMM_32 = {(0, 0x00): ADDIW, (1, 0x00): SLLIW, (5, 0x00): SRLIW, (5, 0x20): SRAIW}
+  OP_32 = {(0, 0x00): ADDW, (0, 0x20): SUBW, (1, 0x00): SLLW, (5, 0x00): SRLW,
+           (5, 0x20): SRAW,
+           (0, 0x01): MULW, (4, 0x01): DIVW, (5, 0x01): DIVUW, (6, 0x01): REMW,
+           (7, 0x01): REMUW}
+
+  # memory access
+  def write_i64(s, x, addr):
+    """write 64-bit int to memory (takes 8 byte-addresses)"""
+    for i in range(8): s.mem[addr + i] = (x >> (8*i)) & 0xff
+
+  def read_i64(s, addr):
+    """read 64-bit signed int from memory"""
+    ret = s.i8(s.mem[addr + 7]) << 7*8
+    for i in range(7): ret += s.mem[addr + i] << i*8
+    return ret
+
+  def write_i64_vec(s, vec, start):
+    for i, x in enumerate(vec): s.write_i64(x, start + 8*i)
+
+  def read_i64_vec(s, start, size):
+    return [s.read_i64(start + 8*i) for i in range(size)]
+
+  def mem_dump(s, start, size):
+    """for debug: dump memory from byteaddress 'start' as 64-bit words"""
+    for i in range(start, start + size, 8):
+      print('%016x' % (s.read_i64(i) & s.MASK))
 
 #---------------------------------------------------------------------------------
 # register names (ABI mnemonics)

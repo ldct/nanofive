@@ -1,5 +1,5 @@
 from machine import *
-from newlib_test import load_elf
+from newlib_test import load_elf, elf_machine
 import io, os, subprocess, sys, time, contextlib
 
 # Run Michael Stoll's ratpoints (rational points on hyperelliptic curves
@@ -33,14 +33,16 @@ def setup_args(m, argv):
   addrs, a = [], top
   for s in strs:
     m.mem[a : a + len(s)] = s; addrs.append(a); a += len(s)
-  sp = (top - 4 * (len(argv) + 2)) & ~15
-  m.write_i32_vec([len(argv)] + addrs + [0], sp)
+  w = m.XLEN // 8  # argc and the pointers are XLEN bits wide
+  sp = (top - w * (len(argv) + 2)) & ~15
+  for i, v in enumerate([len(argv)] + addrs + [0]):
+    m.mem[sp + w*i : sp + w*(i+1)] = v.to_bytes(w, 'little')
   m.x[2] = sp
 
 def run_elf(path, argv, stdin=''):
   """run an ELF with arguments argv (argv[0] = program name) on a fresh
   machine; return (stdout text, exit code, #instructions, seconds)"""
-  m = machine(mem_size=MEM_SIZE)
+  m = elf_machine(path, MEM_SIZE)
   m.pc = load_elf(m, path)
   setup_args(m, argv)
   out, steps, t = io.StringIO(), 0, time.time()
