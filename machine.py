@@ -7,8 +7,8 @@
 
 import sys
 
-def _i32(v): return ((v + 0x80000000) & 0xffffffff) - 0x80000000  # wrap to int32
-def _i64(v): return ((v + 2**63) & (2**64 - 1)) - 2**63               # wrap to int64
+def _i32(v): return ((v + 2**31) & (2**32 - 1)) - 2**31  # wrap to int32
+def _i64(v): return ((v + 2**63) & (2**64 - 1)) - 2**63  # wrap to int64
 
 class _xregs(list):
   def __setitem__(s, i, v): super().__setitem__(i, _i32(v))

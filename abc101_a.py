@@ -4,56 +4,78 @@ from machine import *
 # https://atcoder.jp/contests/abc101/tasks/abc101_a
 # Start from 0; read a string of '+'/'-', add 1 for each '+', subtract 1 for
 # each '-', and print the result. Runs as RV32I machine code; I/O via ecalls
-# (RARS convention, see machine.ECALL). Assembled with riscv64-unknown-elf-as.
-
-
-t0 = 5
+# (RARS convention, see machine.ECALL).
 
 class asm:
-  @staticmethod
-  def _itype(opcode, rd, func3, rs1, imm):
+  def _itype(opcode, funct3, rd, rs1, imm):
     assert -2048 <= imm < 2048, 'imm must fit in 12 bits (signed)'
-    return ((imm & 0xfff) << 20) | (rs1 << 15) | (func3 << 12) | (rd << 7) | opcode
+    return ((imm & 0xfff) << 20) | (rs1 << 15) | (funct3 << 12) | (rd << 7) | opcode
 
+  def _stype(opcode, funct3, rs2, imm, rs1):
+    assert -2048 <= imm < 2048, 'imm must fit in 12 bits (signed)'
+    imm &= 0xfff
+    return ((imm >> 5) << 25) | (rs2 << 20) | (rs1 << 15) | (funct3 << 12) | \
+           ((imm & 0x1f) << 7) | opcode
 
-  @staticmethod
-  def make_itype(opcode, func3):
-    return lambda rd, rs1, imm: asm._itype(opcode, rd, func3, rs1, imm)
+  def _btype(opcode, funct3, rs1, rs2, imm):
+    assert -4096 <= imm < 4096 and imm % 2 == 0, 'imm must be even and fit in 13 bits (signed)'
+    imm &= 0x1fff
+    return (((imm >> 12) & 1) << 31) | (((imm >> 5) & 0x3f) << 25) | (rs2 << 20) | \
+           (rs1 << 15) | (funct3 << 12) | (((imm >> 1) & 0xf) << 8) | \
+           (((imm >> 11) & 1) << 7) | opcode
 
-  ECALL = staticmethod(lambda: 0x00000073)
+  def _jtype(opcode, rd, imm):
+    assert -2**20 <= imm < 2**20 and imm % 2 == 0, 'imm must be even and fit in 21 bits (signed)'
+    imm &= 0x1fffff
+    return (((imm >> 20) & 1) << 31) | (((imm >> 1) & 0x3ff) << 21) | \
+           (((imm >> 11) & 1) << 20) | (((imm >> 12) & 0xff) << 12) | (rd << 7) | opcode
+
+  # operands in assembly order: ADDI(rd, rs1, imm), SW(rs2, imm, rs1),
+  # BEQ(rs1, rs2, imm), JAL(rd, imm) -- same as machine.ADDI etc
+  def make_itype(opcode, funct3): return lambda *ops: asm._itype(opcode, funct3, *ops)
+  def make_stype(opcode, funct3): return lambda *ops: asm._stype(opcode, funct3, *ops)
+  def make_btype(opcode, funct3): return lambda *ops: asm._btype(opcode, funct3, *ops)
+  def make_jtype(opcode):         return lambda *ops: asm._jtype(opcode, *ops)
+
+  ECALL = lambda: 0x00000073
   ADDI = make_itype(0b0010011, 0b000)
+  BEQ  = make_btype(0b1100011, 0b000)
+  JAL  = make_jtype(0b1101111)
 
-  @staticmethod
-  def LI(rd, imm): return asm.ADDI(rd, 0, imm)
+  def LI(rd, imm): return asm.ADDI(rd, 0, imm) # short LI, only for small imm
+  def J(offset): return asm.JAL(zero, offset)
+  def MV(rd, rs): return asm.ADDI(rd, rs, 0)
 
 prog = [
-  asm.LI(t0, 0),  #  0: li   t0, 0           t0 <- running total
+  asm.LI(t0, 0),   #  0:t0 <- running total
   
   # loop:
-  0x00c00893,  #  4: li   a7, 12          (read_char)
-  asm.ECALL(),  #  8: ecall                a0 <- next char, -1 at end of input
-  0x02b00313,  # 12: li   t1, '+'
-  0x00650863,  # 16: beq  a0, t1, plus
-  0x02d00313,  # 20: li   t1, '-'
-  0x00650863,  # 24: beq  a0, t1, minus
-  0x0140006f,  # 28: j    done            newline or end of input
+  asm.LI(a7, 12),  #  4: (read_char)
+  asm.ECALL(),     #  8: a0 <- next char, -1 at end of input
+  asm.LI(t1, 43),  # 12: t1 <- '+'
+  asm.BEQ(a0, t1, 16),  # 16: beq  a0, t1, plus
+  asm.LI(t1, 45),  # 20: t1 <- '-'
+  asm.BEQ(a0, t1, 16),  # 24: beq  a0, t1, minus
+  asm.J(20),   # 28: j done (newline or end of input)
+
   # plus:
   asm.ADDI(t0, t0, 1),
-  0xfe1ff06f,  # 36: j    loop
+  asm.J(-32),  # 36: j loop
   
   # minus:
-  0xfff28293,  # 40: addi t0, t0, -1
-  0xfd9ff06f,  # 44: j    loop
+  asm.ADDI(t0, t0, -1),  # 40
+  asm.J(-40),  # 44: j loop
   
   # done:
-  0x00028513,  # 48: mv   a0, t0
-  0x00100893,  # 52: li   a7, 1           (print_int)
+  asm.MV(a0, t0),  # 48: mv   a0, t0
+  asm.LI(a7, 1),  # 52: (print_int)
   asm.ECALL(),  # 56: ecall
-  0x00a00513,  # 60: li   a0, '\n'
-  0x00b00893,  # 64: li   a7, 11          (print_char)
+  asm.LI(a0, 10),  # 60: a0 <- '\n'
+  asm.LI(a7, 11),  # 64: (print_char)
   asm.ECALL(),  # 68: ecall
-  0x00a00893,  # 72: li   a7, 10          (exit)
-  0x00000073]  # 76: ecall
+  asm.LI(a7, 10),  # 72: (exit)
+  asm.ECALL()  # 76
+]
 
 if __name__ == "__main__":
   m = machine(mem_size=256)
