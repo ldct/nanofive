@@ -7,21 +7,15 @@
 
 import sys
 
-#-------------------------------------------------------------------------------
-# Python ints are unbounded, so every register write is wrapped to 32 bits here,
-# like hardware does
-
 def _i32(v): return ((v + 0x80000000) & 0xffffffff) - 0x80000000  # wrap to int32
 
-class _XRegs(list):
-  """integer regfile; writes wrap to signed int32"""
+class _xregs(list):
   def __setitem__(s, i, v): super().__setitem__(i, _i32(v))
 
 class machine:
-  def __init__(s, mem_size):  # for brevity we use 's' instead of 'self'
-    """create state of CPU: memory mem[], regfile x[], program counter 'pc'"""
+  def __init__(s, mem_size):
     s.mem = bytearray(mem_size)   # memory 'mem[]' is unsigned int8
-    s.x   = _XRegs([0] * 32)      # regfile 'x[]' is signed int32
+    s.x   = _xregs([0] * 32)      # regfile 'x[]' is signed int32
     s.pc  = 0                     # program counter (PC) is uint32
     s.halted = False              # set by the exit system call
 
@@ -257,7 +251,7 @@ class machine:
   # useful functions for accessing state and memory
 
   def clear_cpu(s):
-    s.x = _XRegs([0] * 32)
+    s.x = _xregs([0] * 32)
     s.pc = 0
     s.halted = False
     # TODO: add an option that initializes all registers with random data so we
@@ -269,9 +263,6 @@ class machine:
       end = len(s.mem)  # use maximum memory address by default
     for i in range(start, end): s.mem[i] = 0
 
-  # TODO: replace write_* and read_* defs by generic 'write_mem' and 'read_mem'
-  # that work for any tensor.  For read, have a size-parameter that can be set
-  # to e.g. (4, 4) for a 4x4 matrix
   def write_i32_vec(s, vec, start):
     """write i32-vector to memory address 'start'"""
     for i, x in enumerate(vec):

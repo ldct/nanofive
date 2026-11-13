@@ -1,6 +1,5 @@
 from machine import *
-# uncomment below to use the tinyfive PyPi package instead of ./machine.py
-# from tinyfive.machine import *
+from machine import _i32, _xregs
 
 # this file performs the following tests:
 #   1) ALU instruction tests (arithmetic, logic, shift) derived from the
@@ -17,6 +16,30 @@ from machine import *
 #   test-suite is as follows:
 #     // Copyright (c) 2020. RISC-V International. All rights reserved.
 #     // SPDX-License-Identifier: BSD-3-Clause
+
+
+#: most negative integer that fits in i32
+MIN_I32 = -2**31
+
+#: most positive integer that fits in i32
+MAX_I32 = 2**31 - 1
+
+#-------------------------------------------------------------------------------
+# _i32 function
+# this is the identity function if its argument fits in i32 (i.e. between -2^31 and 2^31-1). otherwise, it interprets the lowest 32 bits as a signed integer.
+#-------------------------------------------------------------------------------
+for x in range(-10, 10):
+  assert(_i32(x) == x)
+assert(_i32(MAX_I32) == MAX_I32)
+assert(_i32(MIN_I32) == MIN_I32)
+assert(_i32(MAX_I32 + 1) == MIN_I32)
+
+#-------------------------------------------------------------------------------
+# test machine class
+#-------------------------------------------------------------------------------
+x = _xregs([0, 0])
+x[0] = MAX_I32 + 1
+assert(x[0] == MIN_I32)
 
 m = machine(mem_size=1000)  # instantiate RISC-V machine with 1KB of memory
 
