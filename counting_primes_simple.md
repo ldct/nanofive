@@ -11,6 +11,9 @@ It has no arrays, stack, memory writes, multiplication, or division.
 Unlike the fast `counting_primes_*.py` submissions, it is intentionally
 impractical for large inputs.
 
+For a byte-array Sieve of Eratosthenes with its own RISC-V machine proof,
+see `counting_primes_sieve.py` and `counting_primes_sieve.md`.
+
 The Python adapter reads an integer `N`, checks `0 ≤ N ≤ 2147483646`,
 loads it into `a0`, and starts the machine. The instructions themselves
 count primes **less than or equal to N**, print the decimal count and a
