@@ -132,9 +132,7 @@ theorem step_image (hw : w = 32 ∨ w = 64) (x : Regs w) (pc : BitVec w)
     (inp : List Char) (out : String) (st : Status) (h : pc.toNat < 80) (h4 : pc.toNat % 4 = 0) :
     step ⟨x, pc, image, inp, out, st⟩ =
       exec (code.getD (pc.toNat / 4) .ecall) ⟨x, pc, image, inp, out, st⟩ := by
-  obtain rfl | rfl := hw
-  · simp only [step, fetch32 _ h h4]
-  · simp only [step, fetch64 _ h h4]
+ grind [step, fetch32 _ h h4, fetch64 _ h h4]
 
 /-- Symbolic execution: run a machine whose state is given explicitly, with concrete `pc`. -/
 macro "sym_exec" : tactic =>
@@ -143,14 +141,9 @@ macro "sym_exec" : tactic =>
 
 theorem ofNat_toNat_ne (hw : w = 32 ∨ w = 64) {c d : Char} (h : c ≠ d) :
     BitVec.ofNat w c.toNat ≠ BitVec.ofNat w d.toNat := by
-  intro h'
-  apply h
-  have h' := congrArg BitVec.toNat h'
   have hc : c.toNat < 2 ^ 32 := c.val.toNat_lt
   have hd : d.toNat < 2 ^ 32 := d.val.toNat_lt
-  have : c.toNat = d.toNat := by
-    obtain rfl | rfl := hw <;> simp only [BitVec.toNat_ofNat] at h' <;> omega
-  rw [← Char.ofNat_toNat c, this, Char.ofNat_toNat]
+  grind [BitVec.toNat_ofNat, Char.ofNat_toNat]
 
 theorem push_newline (s : String) : s.push (Char.ofNat 10) = s ++ "\n" := by
   rfl
@@ -182,19 +175,18 @@ theorem done_cons (hw : w = 32 ∨ w = 64) (x : Regs w) (c : Char) (rest : List 
         out ++ toString (x.get 5).toInt ++ "\n" := by
   have hp : BitVec.ofNat w c.toNat ≠ 43#w := ofNat_toNat_ne hw hp
   have hm : BitVec.ofNat w c.toNat ≠ 45#w := ofNat_toNat_ne hw hm
-  obtain rfl | rfl := hw <;> sym_exec <;> exact push_newline _
+  obtain rfl | rfl := hw <;> sym_exec <;> grind [push_newline]
 
-/-- The number the program should print: over the leading run of `+` and `-` characters, the
-count of `+` minus the count of `-`. -/
+/-- spec -/
 def tally (input : List Char) : Int :=
   let signs := input.takeWhile fun c => c = '+' ∨ c = '-'
   signs.count '+' - signs.count '-'
 
 theorem tally_plus (rest : List Char) : tally ('+' :: rest) = tally rest + 1 := by
-  simp [tally]; omega
+  grind [tally, List.takeWhile_cons_of_pos]
 
 theorem tally_minus (rest : List Char) : tally ('-' :: rest) = tally rest - 1 := by
-  simp [tally]; omega
+  grind [tally, List.takeWhile_cons_of_pos]
 
 theorem tally_other (c : Char) (rest : List Char) (hp : c ≠ '+') (hm : c ≠ '-') :
     tally (c :: rest) = 0 := by
@@ -203,12 +195,11 @@ theorem tally_other (c : Char) (rest : List Char) (hp : c ≠ '+') (hm : c ≠ '
 theorem tally_bounds (input : List Char) :
     -(input.length : Int) ≤ tally input ∧ tally input ≤ input.length := by
   have hlen := (List.takeWhile_sublist (l := input) fun c => decide (c = '+' ∨ c = '-')).length_le
-  have hplus := List.count_le_length (a := '+')
-    (l := input.takeWhile fun c => decide (c = '+' ∨ c = '-'))
-  have hminus := List.count_le_length (a := '-')
-    (l := input.takeWhile fun c => decide (c = '+' ∨ c = '-'))
-  simp only [tally]
-  omega
+  grind [tally]
+
+abbrev initial_machine (input : List Char) := (load w prog 256 input)
+
+abbrev is_exited_with_output (machine : Machine w) (output : String) := machine.status = .exited 0 ∧ machine.output = output
 
 /-- From the head of the loop with `t0 = t`, the program prints `t` plus the tally of the
 remaining input, then exits. -/
@@ -237,15 +228,14 @@ theorem loop_correct (hw : w = 32 ∨ w = 64) (inp : List Char) (x : Regs w) (ou
           x.get 5 + BitVec.ofInt w (tally rest - 1) := by
         obtain rfl | rfl := hw <;> simp [Int.sub_eq_add_neg, BitVec.ofInt_add] <;> bv_omega
       rwa [run_add, hrun, tally_minus, ← e, ← hx']
-    · exact ⟨15, by simpa [tally_other c rest hp hm] using done_cons hw x c rest out hp hm⟩
+    · grind [tally_other, done_cons]
 
 /-- **Correctness of `abc101_a.py`.** Loaded into a 256-byte machine and run from address 0, the
 program exits with code 0 having printed the tally of its input as a signed `w`-bit number,
 followed by a newline. -/
 theorem correct (hw : w = 32 ∨ w = 64) (input : List Char) :
-    ∃ n, (run n (load w prog 256 input)).status = .exited 0 ∧
-      (run n (load w prog 256 input)).output =
-        toString (BitVec.ofInt w (tally input)).toInt ++ "\n" := by
+    ∃ n, is_exited_with_output (run n (initial_machine (w := w) input)) (toString (BitVec.ofInt w (tally input)).toInt ++ "\n")
+:= by
   have first : ∃ x' : Regs w, x'.get 5 = 0 ∧
       run 1 (load w prog 256 input) = ⟨x', 4, image, input, "", .running⟩ := by
     have : load w prog 256 input = ⟨⟨Vector.replicate 32 0⟩, 0, image, input, "", .running⟩ := rfl
@@ -260,13 +250,13 @@ theorem correct (hw : w = 32 ∨ w = 64) (input : List Char) :
 /-- When the input is too short for the tally to overflow, the program prints the tally itself. -/
 theorem correct_of_length_lt (hw : w = 32 ∨ w = 64) (input : List Char)
     (h : input.length < 2 ^ 31) :
-    ∃ n, (run n (load w prog 256 input)).status = .exited 0 ∧
-      (run n (load w prog 256 input)).output = toString (tally input) ++ "\n" := by
+    ∃ n,
+      is_exited_with_output (run n (initial_machine (w := w) input)) (toString (tally input) ++ "\n") := by
   have hb := tally_bounds input
   have e : (BitVec.ofInt w (tally input)).toInt = tally input := by
     rw [BitVec.toInt_ofInt]
-    apply Int.bmod_eq_of_le <;> obtain rfl | rfl := hw <;> simp <;> omega
-  simpa [e] using correct hw input
+    grind
+  simpa only [Int.toString_eq_repr, e] using correct hw input
 
 end Abc101a
 
