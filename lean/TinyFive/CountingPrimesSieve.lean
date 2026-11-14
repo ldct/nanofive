@@ -2,6 +2,7 @@ import TinyFive.CountingPrimes
 import TinyFive.SieveMemory
 import TinyFive.SieveMath
 import TinyFive.SieveCost
+import TinyFive.SieveCostBound
 
 /-!
 # RV32I byte-sieve machine correctness
@@ -27,6 +28,8 @@ simple bound `13 + (n-1)*(9+5*n)`. `correct_under_10000` proves a stricter pract
 all `n ≤ 600`; `still_running_10000` proves that 10,000 is not a bound for the whole valid
 input domain. These count modeled RV32I instructions, including system calls, not wall time
 or the host wrapper's input parsing and memory allocation.
+`correct_under_rv32_dyadic_cap` gives the tighter uniform bound `< 2^38` for
+the whole supported domain, using only elementary dyadic blocks.
 -/
 namespace TinyFive.CountingPrimesSieve
 open CountingPrimes SieveMemory SieveMath SieveCost
@@ -481,6 +484,20 @@ theorem correct_under_rv32_cap (n : Nat) (hn : n ≤ 2^30-1) :
     ∃ fuel, fuel < 2^63 ∧ (run fuel (initial n)).status = .exited 0 ∧
       (run fuel (initial n)).output = toString (countPrimes n) ++ "\n" :=
   ⟨instructionCount n, instructionCount_rv32_cap n hn, correct_with_time n hn⟩
+
+/-- Every supported RV32 input exits in fewer than `2^38` modeled instructions.
+The dyadic overcount includes every candidate, not just primes, and does not
+evaluate the instruction-count function at the maximum input. -/
+theorem correct_under_rv32_dyadic_cap (n : Nat) (hn : n ≤ 2^30-1) :
+    ∃ fuel, fuel < 2^38 ∧ (run fuel (initial n)).status = .exited 0 ∧
+      (run fuel (initial n)).output = toString (countPrimes n) ++ "\n" :=
+  ⟨instructionCount n, instructionCount_rv32_dyadic_cap n hn, correct_with_time n hn⟩
+
+/-- The literal dyadic instruction bound, uniformly for the complete valid input domain. -/
+theorem correct_bounded_rv32_dyadic (n : Nat) (hn : n ≤ 2^30-1) :
+    ∃ fuel, fuel ≤ 165356240746 ∧ (run fuel (initial n)).status = .exited 0 ∧
+      (run fuel (initial n)).output = toString (countPrimes n) ++ "\n" :=
+  ⟨instructionCount n, instructionCount_rv32_dyadic_bound n hn, correct_with_time n hn⟩
 
 /-- Ten thousand instructions is not a bound over all valid inputs: this valid input is
 still running at that point. The proof uses the lower cost bound, not a long evaluated trace. -/
