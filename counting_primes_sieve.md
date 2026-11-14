@@ -59,6 +59,7 @@ Supporting modules:
 * `SieveMemory.lean`: byte loads/stores, code-prefix preservation, and
   zero-initialized loader memory.
 * `SieveCost.lean`: instruction budgets, monotonicity, and numerical bounds.
+* `SieveCostBound.lean`: a tighter uniform bound using dyadic divisor blocks.
 
 ## Proved instruction bounds
 
@@ -94,11 +95,40 @@ The cost lemmas also prove:
   less than 10,000. The numerical budget at 600 is checked by Lean's kernel.
 * For every supported input, a simple (deliberately loose) upper bound is
   `13 + max(N - 1, 0) * (9 + 5*N)`.
-* Over the full valid range `N ≤ 2^30 - 1`, the budget is less than `2^63`.
+* **Every valid input `0 ≤ N ≤ 2^30 - 1` finishes in at most
+  165,356,240,746 instructions**, strictly below `2^38`. This replaces
+  `2^63` as the preferred uniform bound without restricting the input range.
 
 The corresponding machine theorems are `correct_under_10000`,
-`correct_bounded`, and `correct_under_rv32_cap`. The original valid input
-range and RISC-V instructions are unchanged.
+`correct_bounded`, and `correct_bounded_rv32_dyadic` (or
+`correct_under_rv32_dyadic_cap` for the rounded `2^38` bound).
+The old `correct_under_rv32_cap` theorem remains available for compatibility.
+The original valid input range and RISC-V instructions are unchanged.
+
+### Why the tighter uniform bound is still simple
+
+Partition candidates into 29 intervals `[a, 2*a)`, for
+`a = 2, 4, ..., 2^29`. Each interval has `a` candidates and every quotient
+`floor(N/p)` in it is at most `floor(N/a)`. Even overcounting by letting
+**every** candidate mark multiples, its total cost is at most
+
+```
+a * (9 + 5*floor(N/a)) ≤ 9*a + 5*N.
+```
+
+Pad the scan to the end of these intervals; all added candidate costs
+are nonnegative. Summing the interval bounds gives
+
+```
+T(N) ≤ 13 + 9*(2^30 - 2) + 145*N
+     ≤ 165356240746                 for N ≤ 2^30 - 1.
+```
+
+This is a deterministic, conservative bound: no prime-density estimates,
+probability assumptions, or evaluation at the maximum input are needed.
+It uses only finite sums and elementary integer division. More generally,
+`instructionCount_dyadic_upper` proves
+`T(N) ≤ 13 + 9*(2^(k+1) - 2) + 5*k*N` whenever `N < 2^(k+1)`.
 
 These bounds count executed RV32 instructions, including each `ecall` as
 one instruction. They do **not** bound CPU cycles, Python/Lean interpreter
