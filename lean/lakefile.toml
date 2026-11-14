@@ -1,5 +1,5 @@
 name = "tinyfive"
-defaultTargets = ["TinyFive", "abc101a", "counting_primes_simple", "counting_primes_sieve"]
+defaultTargets = ["TinyFive", "abc101a", "counting_primes_simple", "counting_primes_sieve", "counting_primes_wheel"]
 
 [[lean_lib]]
 name = "TinyFive"
@@ -15,3 +15,7 @@ root = "PrimeMain"
 [[lean_exe]]
 name = "counting_primes_sieve"
 root = "SieveMain"
+
+[[lean_exe]]
+name = "counting_primes_wheel"
+root = "WheelMain"
