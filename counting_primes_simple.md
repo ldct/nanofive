@@ -57,6 +57,55 @@ print(count)
   The input bound prevents register overflow and keeps the printed
   count within the signed 32-bit range. Branches use unsigned comparisons.
 
+## Proved instruction bounds
+
+For **every valid input `0 ≤ N ≤ 2^31 - 2`**, the loaded RISC-V program
+terminates with the correct output within
+
+```
+11 + max(N - 1, 0) * (6 + 96*N)
+```
+
+instructions. Over the entire unchanged input range this is at most
+**442,721,856,751,121,990,201 instructions**, strictly below `2^69`.
+This is a conservative uniform bound, not an estimate of typical running time.
+
+The machine proof first establishes the sharper input-dependent budget
+`TrialDivisionCost.instructionBound N`:
+
+```
+11 + max(N - 1, 0) *
+     (6 + sum over d = 2..N-1 of (6 + 3*floor(N/d)))
+```
+
+The eleven fixed instructions are initialization (2) and final
+branch/printing/exit (9). For candidate `k` and divisor `d`, the remainder
+loop executes exactly `1 + 3*floor(k/d)` instructions. Including the
+divisor-test branches costs at most `6 + 3*floor(k/d)`.
+We overcount by testing every possible divisor even when a composite
+candidate would exit early, and by replacing every candidate with `N`.
+
+To simplify the sum, partition the divisors into 30 intervals `[a, 2*a)`,
+for `a = 2, 4, ..., 2^30`. Each contains `a` terms bounded by
+`floor(N/a)`, so its quotient sum is at most
+`a*floor(N/a) ≤ N`. Thus all quotient terms sum to at most `30*N`;
+including the divisor-test overhead gives the `96*N` bound above.
+No prime-density estimates or maximum-input execution are needed.
+
+`lean/TinyFive/TrialDivisionCost.lean` proves the arithmetic bounds.
+`CountingPrimes.correct_bounded`, `correct_quadratic_bound`, and
+`correct_uniform_bound` connect them to termination and output of the
+actual machine; `correct_numeric_bound` gives the literal uniform cap.
+`correct_dyadic_bound` also allows fewer divisor buckets for smaller inputs.
+The original `correct` theorem remains available.
+Unlike the sieve's exact first-exit formula, these trial-division budgets
+are upper bounds: they intentionally overcount early exits.
+
+Each modeled `ecall` counts as one instruction. These are not bounds on
+CPU cycles, interpreter wall-clock time, host input/allocation, or the
+work performed inside system calls. Tests independently count emulator
+steps, check a quotient-based reference count, and verify the bounds.
+
 ## Formal verification boundary
 
 `lean/TinyFive/CountingPrimes.lean` contains the Lean proof against
