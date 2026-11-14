@@ -1,13 +1,14 @@
 /-!
 # A small RISC-V machine model
 
-A Lean counterpart of `machine.py`: the RV32I base instructions at register width `w`, with the
-RARS-style system calls that `machine.ECALL` implements. `w = 32` corresponds to `machine`; at
-`w = 64` the same instructions behave as `machine64` does, without the RV64-only ones.
+A Lean counterpart of `machine.py`: the RV32I base instructions and the M extension at register
+width `w`, with the RARS-style system calls that `machine.ECALL` implements. `w = 32` corresponds
+to `machine`; at `w = 64` the same instructions behave as `machine64` does, without the RV64-only
+ones.
 
 Differences from `machine.py`:
 
-* the M extension and the RV64-only instructions are absent;
+* the RV64-only instructions are absent;
 * system calls 4, 5 and 8 (print string, read integer, read line) are absent;
 * an address is an unsigned `w`-bit number and an access outside memory is a fault, whereas Python
   lets a negative index wrap to the end of `mem`;
@@ -26,6 +27,11 @@ inductive BranchOp where
   | beq | bne | blt | bge | bltu | bgeu
   deriving DecidableEq, Repr
 
+/-- The M extension: multiplication and division. -/
+inductive MulOp where
+  | mul | mulh | mulhsu | mulhu | div | divu | rem | remu
+  deriving DecidableEq, Repr
+
 inductive Width where
   | byte | half | word
   deriving DecidableEq, Repr
@@ -40,6 +46,7 @@ inductive Instr where
   | store (width : Width) (rs2 rs1 : Reg) (imm : BitVec 12)
   | opImm (op : AluOp) (rd rs1 : Reg) (imm : BitVec 12)
   | op (op : AluOp) (rd rs1 rs2 : Reg)
+  | mulOp (op : MulOp) (rd rs1 rs2 : Reg)
   | ecall
   deriving DecidableEq, Repr
 
@@ -117,6 +124,14 @@ def decode (w : Nat) (i : BitVec 32) : Option Instr :=
     | 5, 0x20 => some (.op .sra rd rs1 rs2)
     | 6, 0x00 => some (.op .or rd rs1 rs2)
     | 7, 0x00 => some (.op .and rd rs1 rs2)
+    | 0, 0x01 => some (.mulOp .mul rd rs1 rs2)
+    | 1, 0x01 => some (.mulOp .mulh rd rs1 rs2)
+    | 2, 0x01 => some (.mulOp .mulhsu rd rs1 rs2)
+    | 3, 0x01 => some (.mulOp .mulhu rd rs1 rs2)
+    | 4, 0x01 => some (.mulOp .div rd rs1 rs2)
+    | 5, 0x01 => some (.mulOp .divu rd rs1 rs2)
+    | 6, 0x01 => some (.mulOp .rem rd rs1 rs2)
+    | 7, 0x01 => some (.mulOp .remu rd rs1 rs2)
     | _, _ => none
   | _ => if i = 0x00000073 then some .ecall else none
 
@@ -181,6 +196,21 @@ def alu {w : Nat} (op : AluOp) (a b : BitVec w) : BitVec w :=
   | .sra => a.sshiftRight (b.toNat % w)
   | .or => a ||| b
   | .and => a &&& b
+
+/-- The M extension. The high halves of products are the floor of the exact product divided by
+`2 ^ w`. As the specification requires, division never traps: dividing by zero gives all ones
+and leaves the dividend as remainder, and the signed overflow `-2 ^ (w - 1) / -1` gives the
+dividend and remainder 0 (which `BitVec.sdiv` and `BitVec.srem` already do). -/
+def mulAlu {w : Nat} (op : MulOp) (a b : BitVec w) : BitVec w :=
+  match op with
+  | .mul => a * b
+  | .mulh => BitVec.ofInt w ((a.toInt * b.toInt) / 2 ^ w)
+  | .mulhsu => BitVec.ofInt w ((a.toInt * b.toNat) / 2 ^ w)
+  | .mulhu => BitVec.ofNat w ((a.toNat * b.toNat) / 2 ^ w)
+  | .div => if b = 0 then -1 else a.sdiv b
+  | .divu => if b = 0 then -1 else a / b
+  | .rem => if b = 0 then a else a.srem b
+  | .remu => if b = 0 then a else a % b
 
 def BranchOp.taken {w : Nat} (op : BranchOp) (a b : BitVec w) : Bool :=
   match op with
@@ -249,6 +279,7 @@ def exec {w : Nat} (i : Instr) (m : Machine w) : Machine w :=
     | none => m.fail
   | .opImm op rd rs1 imm => (m.setReg rd (alu op (m.x.get rs1) (imm.signExtend w))).advance
   | .op op rd rs1 rs2 => (m.setReg rd (alu op (m.x.get rs1) (m.x.get rs2))).advance
+  | .mulOp op rd rs1 rs2 => (m.setReg rd (mulAlu op (m.x.get rs1) (m.x.get rs2))).advance
   | .ecall => ecall m
 
 /-- Execute the instruction at `pc`. -/

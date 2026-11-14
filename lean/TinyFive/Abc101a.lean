@@ -1,4 +1,4 @@
-import TinyFive.Machine
+import TinyFive.Lemmas
 
 /-!
 # Correctness of `abc101_a.py`
@@ -73,15 +73,6 @@ inputs.
 -/
 
 namespace TinyFive
-
-theorem run_add {w : Nat} (a b : Nat) (m : Machine w) : run (a + b) m = run b (run a m) := by
-  induction a generalizing m with
-  | zero => simp [run]
-  | succ a ih =>
-    rw [Nat.add_right_comm, run, run]
-    split
-    · exact ih _
-    · cases b <;> simp [run, *]
 
 namespace Abc101a
 
