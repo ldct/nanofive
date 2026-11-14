@@ -11,7 +11,7 @@ namespace TinyFive.SieveCost
 
 open CountingPrimes
 
-/-- Number of multiples at or after the current marking cursor. -/
+/-- Number of stride-`p` iterations from cursor `j` through `n`, for positive `p`. -/
 def innerIterations (n p j : Nat) : Nat := (n+p-j)/p
 
 /-- The exit test costs one instruction, and each mark costs five. -/

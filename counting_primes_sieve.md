@@ -58,6 +58,57 @@ Supporting modules:
 * `SieveMath.lean`: divisor, skipping, and marking-progress lemmas.
 * `SieveMemory.lean`: byte loads/stores, code-prefix preservation, and
   zero-initialized loader memory.
+* `SieveCost.lean`: instruction budgets, monotonicity, and numerical bounds.
+
+## Proved instruction bounds
+
+There cannot be a 10,000-instruction cap over the entire valid input range:
+even scanning all the candidates costs at least
+`13 + 6 * max(N - 1, 0)` instructions.
+`CountingPrimesSieve.still_running_10000` formally proves that input 2000
+is still running after 10,000 instructions, without evaluating that long
+execution in the proof.
+
+The exact instruction count `SieveCost.instructionCount N` is:
+
+```
+13 + sum over p = 2..N of
+    if p is prime then 9 + 5 * (floor(N/p) - 1)
+    else 6
+```
+
+The 13 instructions are initialization (4) and final branch/printing/exit
+(9). A composite candidate costs 6 instructions. A prime candidate costs
+9, plus 5 for each composite-marking iteration. There are exactly
+`floor(N/p) - 1` such iterations, starting at `2*p`.
+
+`CountingPrimesSieve.correct_with_time` proves that running the actual
+loaded machine for this budget exits successfully with the correct output.
+`running_before` proves that every earlier state is still running;
+`exited_iff_count_le` characterizes precisely which instruction budgets
+have reached the exit. Thus the formula is the first-exit time, not merely
+an oversized fuel allowance.
+The cost lemmas also prove:
+
+* **Every `0 ≤ N ≤ 600` finishes in at most 9,529 instructions**, strictly
+  less than 10,000. The numerical budget at 600 is checked by Lean's kernel.
+* For every supported input, a simple (deliberately loose) upper bound is
+  `13 + max(N - 1, 0) * (9 + 5*N)`.
+* Over the full valid range `N ≤ 2^30 - 1`, the budget is less than `2^63`.
+
+The corresponding machine theorems are `correct_under_10000`,
+`correct_bounded`, and `correct_under_rv32_cap`. The original valid input
+range and RISC-V instructions are unchanged.
+
+These bounds count executed RV32 instructions, including each `ecall` as
+one instruction. They do **not** bound CPU cycles, Python/Lean interpreter
+time, host-side input parsing or zero-initialized allocation, or the work
+performed inside a modeled system call.
+
+Tests count actual emulator instructions and compare them with the budget,
+in addition to checking the prime counts and flag memory.
+
+## Verification boundary
 
 The proof covers the actual instruction words, decoding, wrapping
 register arithmetic, memory operations, and modeled output/exit calls.
