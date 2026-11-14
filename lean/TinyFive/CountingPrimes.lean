@@ -1,4 +1,4 @@
-import TinyFive.Abc101a
+import TinyFive.TrialDivisionCost
 
 /-!
 # Correctness of `counting_primes_simple.py`
@@ -22,8 +22,25 @@ and the wrapper's input parsing/preloading are checked separately, not proved he
 The proof composes symbolic execution blocks using `TinyFive.run_add` from `Abc101a`, then
 uses decreasing natural-number measures for subtraction, divisor search, and candidate search.
 No execution-fuel assumption is required.
+
+## Instruction bound
+
+`correct_bounded` strengthens the same machine execution with budget
+`11 + (n-1)*(6 + scanCost n 2 (n-2))`, where the scan sums
+`6 + 3*(n/d)` over the possible divisors. Thirty dyadic blocks bound the
+quotient sum by `30*n` on the full input domain. Consequently
+`correct_quadratic_bound` gives `11 + (n-1)*(6 + 96*n)`, and
+`correct_numeric_bound` gives a uniform cap of `442721856751121990201 < 2^69`.
+Natural subtraction is truncated, so the formulas also cover zero and one.
+
+The unit is one modeled RV32 instruction, including each `ecall` as one
+instruction. Host input parsing, allocation/loading, emulator overhead, and
+the host work performed by printing are not included. The budgets are upper
+bounds, not claims of exact or minimal running time.
 -/
 namespace TinyFive.CountingPrimes
+
+open TrialDivisionCost
 
 /-- Exact instruction words used by the Python program. -/
 def prog : List (BitVec 32) := [
@@ -164,7 +181,8 @@ The live input, candidate, count, and divisor registers are preserved. -/
 private theorem rem_correct (r d : Nat) (hd : 0 < d) (hd32 : d < 2^32)
     (x : Regs 32) (out : String) (hr : r < 2^32)
     (hxr : x.get 28 = BitVec.ofNat 32 r) (hxd : x.get 7 = BitVec.ofNat 32 d) :
-    ∃ fuel x', x'.get 10 = x.get 10 ∧ x'.get 5 = x.get 5 ∧
+    ∃ fuel x', fuel = 1+3*(r/d) ∧
+      x'.get 10 = x.get 10 ∧ x'.get 5 = x.get 5 ∧
       x'.get 6 = x.get 6 ∧ x'.get 7 = x.get 7 ∧
       x'.get 28 = BitVec.ofNat 32 (r % d) ∧
       run fuel ⟨x, 24, image, [], out, .running⟩ =
@@ -172,7 +190,7 @@ private theorem rem_correct (r d : Nat) (hd : 0 < d) (hd32 : d < 2^32)
   induction r using Nat.strongRecOn generalizing x with
   | ind r ih =>
     by_cases hlt : r < d
-    · refine ⟨1, x, rfl, rfl, rfl, rfl, ?_, ?_⟩
+    · refine ⟨1, x, by simp [Nat.div_eq_of_lt hlt], rfl, rfl, rfl, rfl, ?_, ?_⟩
       · simpa [Nat.mod_eq_of_lt hlt] using hxr
       · apply rem_less
         rw [hxr, hxd, nat_ult r d hr hd32]
@@ -184,10 +202,12 @@ private theorem rem_correct (r d : Nat) (hd : 0 < d) (hd32 : d < 2^32)
       obtain ⟨x', h10, h5, h6, h7, h28, hs⟩ := rem_sub x out hbranch
       have hxr' : x'.get 28 = BitVec.ofNat 32 (r-d) := by
         rw [h28, hxr, hxd, nat_sub r d hr hge]
-      obtain ⟨fuel, x'', g10, g5, g6, g7, g28, ht⟩ :=
+      obtain ⟨fuel, x'', hfuel, g10, g5, g6, g7, g28, ht⟩ :=
         ih (r-d) (by omega) x' (by omega) hxr' (h7.trans hxd)
-      refine ⟨3 + fuel, x'', g10.trans h10, g5.trans h5, g6.trans h6,
+      refine ⟨3 + fuel, x'', ?_, g10.trans h10, g5.trans h5, g6.trans h6,
         g7.trans h7, ?_, ?_⟩
+      · rw [Nat.div_eq_sub_div hd hge, hfuel]
+        omega
       · simpa [Nat.mod_eq_sub_mod hge] using g28
       · rw [run_add, hs, ht]
 
@@ -253,14 +273,15 @@ private theorem trial_correct (k d : Nat) (hk : 2 ≤ k) (hk32 : k < 2^32)
     (hd : 2 ≤ d) (hdk : d ≤ k) (hnodiv : NoDivisor k d)
     (n c : Nat) (x : Regs 32) (out : String) (hinv : Inv x n k c)
     (hxd : x.get 7 = BitVec.ofNat 32 d) :
-    ∃ fuel x', Inv x' n k (c + if Prime k then 1 else 0) ∧
+    ∃ fuel x', fuel ≤ 2+scanCost k d (k-d) ∧
+      Inv x' n k (c + if Prime k then 1 else 0) ∧
       run fuel ⟨x, 16, image, [], out, .running⟩ =
         ⟨x', 52, image, [], out, .running⟩ := by
   by_cases heq : d = k
   · have hp : Prime k := (prime_iff k).mpr ⟨hk, by simpa [heq, NoDivisor] using hnodiv⟩
     have hreg : x.get 7 = x.get 5 := by rw [hxd, hinv.2.1, heq]
     obtain ⟨x', h10, h5, h6, hs⟩ := trial_prime x out hreg
-    refine ⟨2, x', ?_, hs⟩
+    refine ⟨2, x', by simp [heq], ?_, hs⟩
     refine ⟨h10.trans hinv.1, h5.trans hinv.2.1, ?_⟩
     rw [h6, hinv.2.2]
     simp [hp, BitVec.ofNat_add]
@@ -269,7 +290,7 @@ private theorem trial_correct (k d : Nat) (hk : 2 ≤ k) (hk32 : k < 2^32)
       rw [hxd, hinv.2.1]
       exact nat_ne d k (by omega) hk32 heq
     obtain ⟨x', h10, h5, h6, h7, h28, hs⟩ := trial_start x out hreg
-    obtain ⟨fuel, x'', g10, g5, g6, g7, g28, ht⟩ :=
+    obtain ⟨fuel, x'', hfuel, g10, g5, g6, g7, g28, ht⟩ :=
       rem_correct k d (by omega) (by omega) x' out hk32
         (h28.trans hinv.2.1) (h7.trans hxd)
     have hi : Inv x'' n k c :=
@@ -281,7 +302,11 @@ private theorem trial_correct (k d : Nat) (hk : 2 ≤ k) (hk32 : k < 2^32)
         intro hp
         exact (prime_iff k).mp hp |>.2 d hd hlt hz
       have hzreg : x''.get 28 = 0 := by simpa [hz] using g28
-      refine ⟨2 + fuel + 1, x'', ?_, ?_⟩
+      have hscan : scanCost k d (k-d) = 6+3*(k/d)+scanCost k (d+1) (k-(d+1)) := by
+        rw [show k-d = (k-(d+1))+1 by omega, scanCost_succ]
+      refine ⟨2 + fuel + 1, x'', ?_, ?_, ?_⟩
+      · rw [hscan]
+        omega
       · simpa [hnp] using hi
       · rw [run_add, run_add, hs, ht, trial_zero x'' out hzreg]
     · have hnzreg : x''.get 28 ≠ 0#32 := by
@@ -299,10 +324,14 @@ private theorem trial_correct (k d : Nat) (hk : 2 ≤ k) (hk32 : k < 2^32)
         · exact hnodiv e he hed'
         · have : e = d := by omega
           simpa [this] using hz
-      obtain ⟨more, z, hz, hv⟩ :=
+      obtain ⟨more, z, hmore, hz, hv⟩ :=
         trial_correct k (d+1) hk hk32 (by omega) (by omega) hnodiv' n c y out hj hjd
-      refine ⟨2 + fuel + 3 + more, z, hz, ?_⟩
-      rw [run_add, run_add, run_add, hs, ht, hu, hv]
+      have hscan : scanCost k d (k-d) = 6+3*(k/d)+scanCost k (d+1) (k-(d+1)) := by
+        rw [show k-d = (k-(d+1))+1 by omega, scanCost_succ]
+      refine ⟨2 + fuel + 3 + more, z, ?_, hz, ?_⟩
+      · rw [hscan]
+        omega
+      · rw [run_add, run_add, run_add, hs, ht, hu, hv]
 termination_by k-d
 
 private theorem toInt_nat (c : Nat) (hc : c < 2^31) :
@@ -324,7 +353,8 @@ private theorem countPrimes_step (k : Nat) (hk : 0 < k) :
 private theorem outer_correct (n k : Nat) (hn : n ≤ 2^31-2) (hk : 2 ≤ k)
     (hkn : k ≤ n+1) (x : Regs 32) (out : String)
     (hinv : Inv x n k (countPrimes (k-1))) :
-    ∃ fuel, (run fuel ⟨x, 8, image, [], out, .running⟩).status = .exited 0 ∧
+    ∃ fuel, fuel ≤ 9+(n+1-k)*(6+scanCost n 2 (n-2)) ∧
+      (run fuel ⟨x, 8, image, [], out, .running⟩).status = .exited 0 ∧
       (run fuel ⟨x, 8, image, [], out, .running⟩).output =
         out ++ toString (countPrimes n) ++ "\n" := by
   have hn32 : n < 2^32 := by omega
@@ -335,7 +365,7 @@ private theorem outer_correct (n k : Nat) (hn : n ≤ 2^31-2) (hk : 2 ≤ k)
       rw [hinv.1, hinv.2.1, nat_ult n k hn32 hk32]
       simp [hdone]
     have hc : countPrimes n < 2^31 := by have := countPrimes_le n; omega
-    refine ⟨9, ?_⟩
+    refine ⟨9, by omega, ?_⟩
     simpa only [hinv.2.2, he, toInt_nat _ hc, nat_int_string] using outer_done x out hbranch
   · have hnk : k ≤ n := by omega
     have hbranch : (x.get 10).ult (x.get 5) = false := by
@@ -345,7 +375,7 @@ private theorem outer_correct (n k : Nat) (hn : n ≤ 2^31-2) (hk : 2 ≤ k)
     have hi : Inv x' n k (countPrimes (k-1)) :=
       ⟨h10.trans hinv.1, h5.trans hinv.2.1, h6.trans hinv.2.2⟩
     have hnodiv : NoDivisor k 2 := by intro e he he2; omega
-    obtain ⟨fuel, y, hy, ht⟩ :=
+    obtain ⟨fuel, y, hfuel, hy, ht⟩ :=
       trial_correct k 2 hk hk32 (by decide) (by omega) hnodiv n
         (countPrimes (k-1)) x' out hi h7
     have hcount := countPrimes_step k (by omega)
@@ -356,9 +386,15 @@ private theorem outer_correct (n k : Nat) (hn : n ≤ 2^31-2) (hk : 2 ≤ k)
       · rw [j5, hy'.2.1, BitVec.ofNat_add]
         rfl
       · simpa using j6.trans hy'.2.2
-    obtain ⟨more, hm⟩ := outer_correct n (k+1) hn (by omega) (by omega) z out hj
-    refine ⟨2 + fuel + 2 + more, ?_⟩
-    rwa [run_add, run_add, run_add, hs, ht, hu]
+    obtain ⟨more, hmore, hm⟩ := outer_correct n (k+1) hn (by omega) (by omega) z out hj
+    have hscan : scanCost k 2 (k-2) ≤ scanCost n 2 (n-2) :=
+      Nat.le_trans (scanCost_mono_n k n 2 (k-2) hnk)
+        (scanCost_mono_len n 2 (k-2) (n-2) (by omega))
+    refine ⟨2 + fuel + 2 + more, ?_, ?_⟩
+    · have he : n+1-k = (n+1-(k+1))+1 := by omega
+      rw [he, Nat.add_mul, Nat.one_mul]
+      omega
+    · rwa [run_add, run_add, run_add, hs, ht, hu]
 termination_by n+1-k
 
 /-- Initialize the candidate and count without changing the preloaded input. -/
@@ -374,9 +410,11 @@ private theorem initialize_regs (n : Nat) :
 
 /-- **RV32 machine correctness.** For every input up to `2^31-2`, the actual loaded
 instruction words terminate with exit code zero and print the number of primes at most
-`n`, followed by a newline. No fuel or termination hypothesis is assumed. -/
-theorem correct (n : Nat) (hn : n ≤ 2^31-2) :
-    ∃ fuel, (run fuel (initial n)).status = .exited 0 ∧
+`n`, followed by a newline, within `instructionBound n` modeled instructions.
+No fuel or termination hypothesis is assumed. -/
+theorem correct_bounded (n : Nat) (hn : n ≤ 2^31-2) :
+    ∃ fuel, fuel ≤ instructionBound n ∧
+      (run fuel (initial n)).status = .exited 0 ∧
       (run fuel (initial n)).output = toString (countPrimes n) ++ "\n" := by
   obtain ⟨x, hx, hs⟩ := initialize_regs n
   by_cases hsmall : n < 2
@@ -386,14 +424,57 @@ theorem correct (n : Nat) (hn : n ≤ 2^31-2) :
     have hbranch : (x.get 10).ult (x.get 5) = true := by
       rw [hx.1, hx.2.1, nat_ult n 2 (by omega) (by decide)]
       simp [hsmall]
-    refine ⟨2 + 9, ?_⟩
+    refine ⟨2 + 9, by unfold instructionBound; omega, ?_⟩
     rw [run_add, hs]
     simpa only [hx.2.2, hc, toInt_nat 0 (by decide), nat_int_string, String.empty_append]
       using outer_done x "" hbranch
   · have hi : Inv x n 2 (countPrimes (2-1)) := by simpa using hx
-    obtain ⟨fuel, hf⟩ := outer_correct n 2 hn (by decide) (by omega) x "" hi
-    refine ⟨2 + fuel, ?_⟩
-    rw [run_add, hs]
-    simpa using hf
+    obtain ⟨fuel, hbound, hf⟩ := outer_correct n 2 hn (by decide) (by omega) x "" hi
+    refine ⟨2 + fuel, ?_, ?_⟩
+    · unfold instructionBound
+      have he : n+1-2 = n-1 := by omega
+      rw [he] at hbound
+      omega
+    · rw [run_add, hs]
+      simpa using hf
+
+/-- Original correctness API, now obtained from the instruction-bounded proof. -/
+theorem correct (n : Nat) (hn : n ≤ 2^31-2) :
+    ∃ fuel, (run fuel (initial n)).status = .exited 0 ∧
+      (run fuel (initial n)).output = toString (countPrimes n) ++ "\n" := by
+  obtain ⟨fuel, _, h⟩ := correct_bounded n hn
+  exact ⟨fuel, h⟩
+
+/-- Actual loaded-machine execution, with an input-dependent RV32 instruction bound. -/
+theorem correct_quadratic_bound (n : Nat) (hn : n ≤ 2^31-2) :
+    ∃ fuel, fuel ≤ 11+(n-1)*(6+96*n) ∧
+      (run fuel (initial n)).status = .exited 0 ∧
+      (run fuel (initial n)).output = toString (countPrimes n) ++ "\n" := by
+  obtain ⟨fuel, hb, h⟩ := correct_bounded n hn
+  exact ⟨fuel, Nat.le_trans hb (instructionBound_rv32_quadratic n hn), h⟩
+
+/-- A logarithmic-block bound for the actual loaded machine. -/
+theorem correct_dyadic_bound (n k : Nat) (hn : n ≤ 2^31-2) (hk : n < 2^(k+1)) :
+    ∃ fuel, fuel ≤ 11+(n-1)*(6+6*(n-2)+3*k*n) ∧
+      (run fuel (initial n)).status = .exited 0 ∧
+      (run fuel (initial n)).output = toString (countPrimes n) ++ "\n" := by
+  obtain ⟨fuel, hb, h⟩ := correct_bounded n hn
+  exact ⟨fuel, Nat.le_trans hb (instructionBound_dyadic n k hk), h⟩
+
+/-- Explicit numerical instruction cap for the entire supported domain. -/
+theorem correct_numeric_bound (n : Nat) (hn : n ≤ 2^31-2) :
+    ∃ fuel, fuel ≤ 442721856751121990201 ∧
+      (run fuel (initial n)).status = .exited 0 ∧
+      (run fuel (initial n)).output = toString (countPrimes n) ++ "\n" := by
+  obtain ⟨fuel, hb, h⟩ := correct_bounded n hn
+  exact ⟨fuel, Nat.le_trans hb (instructionBound_rv32_bound n hn), h⟩
+
+/-- Uniform instruction cap for the full unchanged input domain. -/
+theorem correct_uniform_bound (n : Nat) (hn : n ≤ 2^31-2) :
+    ∃ fuel, fuel < 2^69 ∧
+      (run fuel (initial n)).status = .exited 0 ∧
+      (run fuel (initial n)).output = toString (countPrimes n) ++ "\n" := by
+  obtain ⟨fuel, hb, h⟩ := correct_bounded n hn
+  exact ⟨fuel, Nat.lt_of_le_of_lt hb (instructionBound_rv32_cap n hn), h⟩
 
 end TinyFive.CountingPrimes
