@@ -136,8 +136,7 @@ def set (x : Regs w) (r : Reg) (v : BitVec w) : Regs w := ⟨x.vec.set r v⟩
 
 theorem get_set (x : Regs w) (i j : Reg) (v : BitVec w) :
     (x.set i v).get j = if j = 0 then 0 else if i = j then v else x.get j := by
-  simp only [get, set, Fin.getElem_fin, Vector.getElem_set, Fin.val_inj]
-  split <;> rfl
+  grind [get, set, Fin.val_inj]
 
 end Regs
 
