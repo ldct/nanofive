@@ -85,3 +85,41 @@ Newton loop oscillates; that second defect is not repaired here.
 proof-status labels, failure diagnostic, and exact adapter patch notes.
 Unrelated programs such as factorial and ABC101 A are not prime counters
 and therefore cannot perform this same workload.
+
+## Comparison with the original Yosupo submissions
+
+The three Library Checker ports identify their exact original submissions.
+Looking them up on Yosupo gives the following reported judge summary times
+(recorded with retrieval time and per-case times in
+`yosupo_comparison_results.json`):
+
+| Original submission | RV32 instructions at N=1,000 | Yosupo reported time |
+|---|---:|---:|
+| lpha #195894 | 953,730 | 13 ms |
+| grumpygordon #50137 | 6,270 | 14 ms |
+| zjy2008 #346093 | 6,170 | 15 ms |
+
+For **these three pairs**, comparing instruction count with runtime:
+
+* Spearman rank correlation: **−1** (the rankings are exactly reversed).
+* Pearson correlation: approximately **−0.8660711**.
+
+This is a descriptive calculation, **not an estimate of a general
+instruction-count/runtime relationship**. There are only three pairs;
+our counts are for small-input RV32 ports, whereas the displayed judge times
+belong to the original native submissions over the judge's test suite.
+The ports also changed arithmetic and target-specific optimizations.
+The result shows that the current N=1,000 ranking does not predict the
+reported Yosupo ranking; it does not show that more instructions generally
+make code faster.
+
+Reproduce the lookup and calculation using the same official API endpoint
+as the submission pages:
+
+```sh
+python yosupo_comparison.py --json yosupo_comparison_results.json
+```
+
+The JSON records the exact official submission and API URLs, overview
+metadata, and per-case timings. Timings may change if the judge rejudges
+the submissions.
