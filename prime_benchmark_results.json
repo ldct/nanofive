@@ -1,0 +1,171 @@
+{
+  "n": 1000,
+  "expected_count": 168,
+  "measurement": "Successful machine.step calls from PC 0 through exit or failure, including ecalls.",
+  "caveats": [
+    "Fixed-size programs use documented constant-only adapters.",
+    "The optional bounds-repaired Plummer row additionally changes one branch; the original is also run.",
+    "Startup and program-specific input/output are included and differ.",
+    "Each ecall and M-extension instruction counts as one instruction, not one CPU cycle.",
+    "Host allocation, loading, and reference checking are excluded.",
+    "Proof status refers only to the three unmodified proved program images."
+  ],
+  "results": [
+    {
+      "program": "counting_primes_zjy2008.py",
+      "variant": "original",
+      "proved": false,
+      "notes": [
+        "Unmodified compiled RV32IM image; reads N from stdin."
+      ],
+      "status": "ok",
+      "count": 168,
+      "instructions": 6170,
+      "output": "168\n"
+    },
+    {
+      "program": "counting_primes_grumpygordon.py",
+      "variant": "original",
+      "proved": false,
+      "notes": [
+        "Unmodified compiled RV32IM image; reads N from stdin."
+      ],
+      "status": "ok",
+      "count": 168,
+      "instructions": 6270,
+      "output": "168\n"
+    },
+    {
+      "program": "byte_sieve.py",
+      "variant": "input-adapted",
+      "proved": false,
+      "notes": [
+        "byte_sieve.py: original RV32 image, PC 0, 0x20000 bytes; inclusive pi(1000).",
+        "Entire startup, algorithm, original output and exit execute on the VM.",
+        "@36: 0x00a00f13 -> 0x00100f13: ten iterations -> one",
+        "@32: 0x00002337 -> 0x00000337: flags initialization exclusive end (upper)",
+        "@48: 0x0fb30313 -> 0x2ef30313: flags initialization exclusive end (lower)",
+        "@28: 0x00002837 -> 0x00000837: last odd index (upper)",
+        "@60: 0xffe80813 -> 0x1f280813: last odd index (lower)",
+        "@56: 0x00006eb7 -> 0x5dc00e93: folded 3*(length+1) loop sentinel",
+        "@224: 0x69203031 -> 0x69203120: heading '10 iterations' -> ' 1 iterations'",
+        "@96: 0x00000513 -> 0x00100513: initialize count to one to include prime 2",
+        "One pass over 499 odd candidates 3..999; prime 2 is included by the RV32 count initializer, not host correction."
+      ],
+      "status": "ok",
+      "count": 168,
+      "instructions": 8493,
+      "output": " 1 iterations\n168 primes\n"
+    },
+    {
+      "program": "rosetta_sieve.py",
+      "variant": "input-adapted",
+      "proved": false,
+      "notes": [
+        "rosetta_sieve.py: original RV32 image, PC 0, 0x20000 bytes; inclusive pi(1000).",
+        "Entire startup, algorithm, original output and exit execute on the VM.",
+        "@196: 0x000027b7 -> 0x000007b7: initial prime count n-1 (upper)",
+        "@204: 0x70f78793 -> 0x3e778793: initial prime count n-1 (lower)",
+        "@200: 0x00002537 -> 0x00000537: eratosthenes inclusive argument n (upper)",
+        "@212: 0x71050513 -> 0x3e850513: eratosthenes inclusive argument n (lower)",
+        "@320: 0x00002537 -> 0x00000537: printed inclusive bound (upper)",
+        "@324: 0x71050513 -> 0x3e850513: printed inclusive bound (lower)",
+        "Original prime-list loop below 100 and all of its output overhead are retained; n>=100 keeps that loop within the sieved range."
+      ],
+      "status": "ok",
+      "count": 168,
+      "instructions": 11567,
+      "output": "2 3 5 7 11 13 17 19 23 29 31 37 41 43 47 53 59 61 67 71 73 79 83 89 97 \n168 primes up to 1000\n"
+    },
+    {
+      "program": "counting_primes_wheel.py",
+      "variant": "original",
+      "proved": true,
+      "notes": [
+        "Unmodified proved RV32I image; N is preloaded in a0."
+      ],
+      "status": "ok",
+      "count": 168,
+      "instructions": 12787,
+      "output": "168\n"
+    },
+    {
+      "program": "counting_primes_sieve.py",
+      "variant": "original",
+      "proved": true,
+      "notes": [
+        "Unmodified proved RV32I image; N is preloaded in a0."
+      ],
+      "status": "ok",
+      "count": 168,
+      "instructions": 16301,
+      "output": "168\n"
+    },
+    {
+      "program": "plummer_sieve.py",
+      "variant": "bounds-repaired",
+      "proved": false,
+      "notes": [
+        "plummer_sieve.py: original RV32 image, PC 0, 0x20000 bytes; inclusive pi(1000).",
+        "Entire startup, algorithm, original output and exit execute on the VM.",
+        "@1624: 0x000f4240 -> 0x000003e9: exclusive maxNumber n+1 implements inclusive pi(n)",
+        "@1436: 0x000137b7 -> 0x000007b7: validation comparison only; calculated count remains untouched (upper)",
+        "@1440: 0x2a278793 -> 0x0a878793: validation comparison only; calculated count remains untouched (lower)",
+        "@1528: 0x34383720 -> 0x38363120: expected-count failure diagnostic",
+        "@1532: 0x0a213839 -> 0x00000a21: expected-count failure diagnostic",
+        "Original output correctly says 'primes below 1001'; this is exactly pi(1000). Original validation/metadata output retained.",
+        "@744: 0x04c96c63 -> 0x04c94c63: NON-CONSTANT bounds bug fix: BLTU -> BLT; negative iStop-cumOffset skips bulk loop and uses bounded tail",
+        "SEPARATE REPAIRED VARIANT, not original constant-only code. The unchanged program banner 'faithful=yes' is original output, not a claim that this branch-repaired image is unmodified."
+      ],
+      "status": "ok",
+      "count": 168,
+      "instructions": 28467,
+      "output": "168 primes below 1001\nmckoss-c830;1;algorithm=wheel,faithful=yes,bits=1\n"
+    },
+    {
+      "program": "counting_primes_lpha.py",
+      "variant": "original",
+      "proved": false,
+      "notes": [
+        "Unmodified compiled RV32IM image; reads N from stdin."
+      ],
+      "status": "ok",
+      "count": 168,
+      "instructions": 953730,
+      "output": "168\n"
+    },
+    {
+      "program": "counting_primes_simple.py",
+      "variant": "original",
+      "proved": true,
+      "notes": [
+        "Unmodified proved RV32I image; N is preloaded in a0."
+      ],
+      "status": "ok",
+      "count": 168,
+      "instructions": 2799716,
+      "output": "168\n"
+    },
+    {
+      "program": "plummer_sieve.py",
+      "variant": "input-adapted",
+      "proved": false,
+      "notes": [
+        "plummer_sieve.py: original RV32 image, PC 0, 0x20000 bytes; inclusive pi(1000).",
+        "Entire startup, algorithm, original output and exit execute on the VM.",
+        "@1624: 0x000f4240 -> 0x000003e9: exclusive maxNumber n+1 implements inclusive pi(n)",
+        "@1436: 0x000137b7 -> 0x000007b7: validation comparison only; calculated count remains untouched (upper)",
+        "@1440: 0x2a278793 -> 0x0a878793: validation comparison only; calculated count remains untouched (lower)",
+        "@1528: 0x34383720 -> 0x38363120: expected-count failure diagnostic",
+        "@1532: 0x0a213839 -> 0x00000a21: expected-count failure diagnostic",
+        "Original output correctly says 'primes below 1001'; this is exactly pi(1000). Original validation/metadata output retained.",
+        "WARNING: original unsigned iStop-cumOffset bulk bound can underflow on small inputs (including 1000); no logic repair is applied. This run may fail out of bounds."
+      ],
+      "status": "failed",
+      "error": "IndexError: bytearray index out of range",
+      "pc": 776,
+      "instructions": 251172,
+      "output": ""
+    }
+  ]
+}
