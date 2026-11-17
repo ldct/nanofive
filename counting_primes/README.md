@@ -1,7 +1,8 @@
 # Counting primes
 
-Three RISC-V RV64I programs that read `N` and print π(N), the number of
-primes at most `N`. Each one's loaded machine code is proved correct in Lean
+Four RISC-V programs that read `N` and print π(N), the number of
+primes at most `N`: three in RV64I and one, `lucy/`, that also uses `mul`,
+`divu`, `ld` and `sd`. Each one's loaded machine code is proved correct in Lean
 against the same specification, `CountingPrimes.countPrimes` in
 `../lean/TinyFive/Primes.lean`. Each proof ends in a theorem `correct` of
 the same shape:
@@ -20,18 +21,23 @@ printing π(n) and a newline, within the budget's number of instructions.
 | `simple/` | trial division by repeated subtraction | 23 instructions (92 bytes) | `11 + 114*n*n` | `11 + 114*10^22` ≈ 1.14×10²⁴ | 2,799,716 |
 | `sieve/` | byte-array Sieve of Eratosthenes | 25 instructions (100 bytes) | `13 + 189*n` | `13 + 189*10^11` ≈ 1.89×10¹³ | 16,301 |
 | `wheel/` | sieve visiting only candidates coprime to 30 | 128 bytes + 12-byte gap table | `15 + 191*n` | `15 + 191*10^11` ≈ 1.91×10¹³ | 12,787 |
+| `lucy/` | Lucy_Hedgehog counting in O(√N) memory | 95 instructions (380 bytes) | `26 + 41*n` | `26 + 41*10^11` ≈ 4.1×10¹² | 562 |
 
 The uniform bound is the budget at `n = 10^11`; each program's
 `correct_uniform_fuel` proves that this one fuel value works for every input.
 
-The budgets are loose upper bounds. Each one comes from bounding a sum of
+The budgets are loose upper bounds. Each of the first three comes from bounding a sum of
 quotients `n/d` by 36 dyadic blocks (`TrialDivisionCost.quotientSum_le_dyadic`),
 which cover every input below `10^11 < 2^37`. The sieve and wheel need
 memory proportional to `n` (about 100 GB near `10^11`), so the proofs cover
 inputs that no test can run.
 
-None of them uses multiplication, division, a stack, or a library, and
-they use only base instructions, so the same words also run on RV32. In each,
+`lucy/` needs only `8 * (isqrt(n) + 1)` bytes of tables; its budget
+charges at most `11*r + 60` instructions to each of at most `r/2` stages,
+where `r*r ≤ n`.
+
+The first three use no multiplication, division, stack, or library, and
+only base instructions, so the same words also run on RV32. In each of the four,
 the Python host only parses `N`, sets up memory and puts `N` in `a0`; the
 counting and printing are done by the RISC-V code.
 
