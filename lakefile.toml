@@ -1,6 +1,6 @@
 name = "tinyfive"
 defaultTargets = ["TinyFive", "Abc101a", "CountingPrimesSimple", "CountingPrimesSieve",
-  "CountingPrimesWheel", "Urlh", "abc101a", "counting_primes_simple", "counting_primes_sieve",
+  "CountingPrimesWheel", "CountingPrimesLucy", "Urlh", "abc101a", "counting_primes_simple", "counting_primes_sieve",
   "counting_primes_wheel"]
 
 # Shared: the machine model and lemmas more than one project uses.
@@ -28,6 +28,11 @@ roots = ["CountingPrimesSieve", "SieveCost", "SieveCostBound"]
 name = "CountingPrimesWheel"
 srcDir = "counting_primes/wheel/lean"
 roots = ["CountingPrimesWheel", "WheelMath"]
+
+[[lean_lib]]
+name = "CountingPrimesLucy"
+srcDir = "counting_primes/lucy/lean"
+roots = ["CountingPrimesLucy", "LucyBlocks", "LucyMath", "LucyMemory"]
 
 [[lean_lib]]
 name = "Urlh"
