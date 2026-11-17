@@ -7,7 +7,7 @@ Marking deliberately uses every multiple (j=2*p, j+=p), not a compressed
 wheel representation. See lean/CountingPrimesWheel.lean for the proof.
 """
 import os, sys
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # machine.py, elf.py
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))  # machine.py, elf.py
 from machine import machine, a0
 
 BASE = 256

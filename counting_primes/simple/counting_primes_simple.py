@@ -7,7 +7,7 @@ See lean/CountingPrimes.lean for the correctness proof.
 """
 
 import os, sys
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # machine.py, elf.py
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))  # machine.py, elf.py
 from machine import machine, a0
 
 MAX_N = 2**31 - 2  # k reaches N+1; the count must print as signed RV32.

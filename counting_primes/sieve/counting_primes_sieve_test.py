@@ -16,7 +16,7 @@ import sys
 import counting_primes_sieve as sieve
 
 HERE = Path(__file__).resolve().parent
-ROOT = HERE.parent
+ROOT = HERE.parent.parent
 LEAN = HERE / "lean"
 
 

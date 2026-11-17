@@ -18,14 +18,12 @@ Shared, at the top level:
 - `lakefile.toml` — one Lake package for all the Lean code
 
 One folder per project, with its tests, and its proofs in
-`<project>/lean/`:
+`<project>/lean/` (`counting_primes/<variant>/lean/` for the prime counters):
 
 | Project | What it is |
 |---|---|
 | `abc101a/` | AtCoder ABC101 A in RV32I machine code (assembled in Python), proved correct |
-| `counting_primes_simple/` | prime counting by trial division, proved correct |
-| `counting_primes_sieve/` | prime counting with a byte sieve, proved correct |
-| `counting_primes_wheel/` | prime counting with a mod-30 wheel sieve, proved correct |
+| `counting_primes/` | three prime counters (trial division, byte sieve, mod-30 wheel sieve) in `simple/`, `sieve/`, `wheel/`, each proved correct |
 | `prime_benchmark/` | instruction counts of the three above and six third-party prime programs |
 | `newlib/` | C with newlib's printf and malloc, on RV32 and RV64 |
 | `ratpoints/` | Michael Stoll's ratpoints, compiled C with GMP |

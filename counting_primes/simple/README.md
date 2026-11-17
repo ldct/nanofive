@@ -12,7 +12,7 @@ Unlike the fast `counting_primes_*.py` submissions, it is intentionally
 impractical for large inputs.
 
 For a byte-array Sieve of Eratosthenes with its own RISC-V machine proof,
-see `../counting_primes_sieve/`.
+see `../sieve/`.
 
 The Python adapter reads an integer `N`, checks `0 ≤ N ≤ 2147483646`,
 loads it into `a0`, and starts the machine. The instructions themselves
@@ -92,7 +92,7 @@ for `a = 2, 4, ..., 2^30`. Each contains `a` terms bounded by
 including the divisor-test overhead gives the `96*N` bound above.
 No prime-density estimates or maximum-input execution are needed.
 
-`../lean/TinyFive/TrialDivisionCost.lean` (shared with the sieve) proves the arithmetic bounds.
+`../../lean/TinyFive/TrialDivisionCost.lean` (shared with the sieve) proves the arithmetic bounds.
 `CountingPrimes.correct_bounded`, `correct_quadratic_bound`, and
 `correct_uniform_bound` connect them to termination and output of the
 actual machine; `correct_numeric_bound` gives the literal uniform cap.
@@ -109,7 +109,7 @@ steps, check a quotient-based reference count, and verify the bounds.
 ## Formal verification boundary
 
 `lean/CountingPrimes.lean` contains the Lean proof against
-`TinyFive.Machine`, the same small model used for `../abc101a/abc101_a.py`.
+`TinyFive.Machine`, the same small model used for `../../abc101a/abc101_a.py`.
 `CountingPrimes.correct` states that every supported input reaches a state
 with exit code zero and output `toString (countPrimes N) ++ "\n"`.
 `prime_iff_no_proper_divisor` connects its primality predicate to ordinary

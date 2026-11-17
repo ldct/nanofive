@@ -37,15 +37,20 @@ STDIN = (
 )
 FIXED = ("byte_sieve.py", "rosetta_sieve.py", "plummer_sieve.py")
 PROGRAMS = PROVEN + STDIN + FIXED
-# The proved programs are projects of their own, in ../<name without .py>/.
+# The proved programs live in ../counting_primes/<variant>/, e.g.
+# counting_primes_sieve.py in ../counting_primes/sieve/.
+def proven_dir(name):
+    return HERE.parent / "counting_primes" / Path(name).stem.removeprefix("counting_primes_")
+
+
 for name in PROVEN:
-    sys.path.insert(0, str(HERE.parent / Path(name).stem))
+    sys.path.insert(0, str(proven_dir(name)))
 
 
 def path(name):
     """Where the program `name` (one of PROGRAMS) is."""
     if name in PROVEN:
-        return HERE.parent / Path(name).stem / name
+        return proven_dir(name) / name
     return HERE / name
 
 

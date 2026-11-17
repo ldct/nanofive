@@ -15,7 +15,7 @@ import sys
 import counting_primes_simple as simple
 
 HERE = Path(__file__).resolve().parent
-ROOT = HERE.parent
+ROOT = HERE.parent.parent
 LEAN = HERE / "lean"
 
 

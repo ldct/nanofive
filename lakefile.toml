@@ -16,17 +16,17 @@ roots = ["Abc101a"]
 
 [[lean_lib]]
 name = "CountingPrimesSimple"
-srcDir = "counting_primes_simple/lean"
+srcDir = "counting_primes/simple/lean"
 roots = ["CountingPrimes"]
 
 [[lean_lib]]
 name = "CountingPrimesSieve"
-srcDir = "counting_primes_sieve/lean"
+srcDir = "counting_primes/sieve/lean"
 roots = ["CountingPrimesSieve", "SieveCost", "SieveCostBound"]
 
 [[lean_lib]]
 name = "CountingPrimesWheel"
-srcDir = "counting_primes_wheel/lean"
+srcDir = "counting_primes/wheel/lean"
 roots = ["CountingPrimesWheel", "WheelMath"]
 
 [[lean_lib]]
@@ -42,15 +42,15 @@ root = "Abc101aMain"
 
 [[lean_exe]]
 name = "counting_primes_simple"
-srcDir = "counting_primes_simple/lean"
+srcDir = "counting_primes/simple/lean"
 root = "PrimeMain"
 
 [[lean_exe]]
 name = "counting_primes_sieve"
-srcDir = "counting_primes_sieve/lean"
+srcDir = "counting_primes/sieve/lean"
 root = "SieveMain"
 
 [[lean_exe]]
 name = "counting_primes_wheel"
-srcDir = "counting_primes_wheel/lean"
+srcDir = "counting_primes/wheel/lean"
 root = "WheelMain"
