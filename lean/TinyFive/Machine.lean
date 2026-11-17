@@ -3,11 +3,14 @@
 
 A Lean counterpart of `machine.py`: the RV32I base instructions at register width `w`, with the
 RARS-style system calls that `machine.ECALL` implements. `w = 32` corresponds to `machine`; at
-`w = 64` the same instructions behave as `machine64` does, without the RV64-only ones.
+`w = 64` the same instructions behave as `machine64` does. Beyond the base instructions the model
+has `mul` and `divu` from the M extension (at either width) and the RV64-only doubleword load and
+store `ld` and `sd`, which decode only at `w = 64`.
 
 Differences from `machine.py`:
 
-* the M extension and the RV64-only instructions are absent;
+* the rest of the M extension (`mulh*`, `div`, `rem*`) and the other RV64-only instructions
+  (`lwu` and the `*w` family) are absent;
 * system calls 4, 5 and 8 (print string, read integer, read line) are absent;
 * an address is an unsigned `w`-bit number and an access outside memory is a fault, whereas Python
   lets a negative index wrap to the end of `mem`;
@@ -19,7 +22,7 @@ namespace TinyFive
 abbrev Reg := Fin 32
 
 inductive AluOp where
-  | add | sub | sll | slt | sltu | xor | srl | sra | or | and
+  | add | sub | sll | slt | sltu | xor | srl | sra | or | and | mul | divu
   deriving DecidableEq, Repr
 
 inductive BranchOp where
@@ -27,7 +30,7 @@ inductive BranchOp where
   deriving DecidableEq, Repr
 
 inductive Width where
-  | byte | half | word
+  | byte | half | word | dword
   deriving DecidableEq, Repr
 
 inductive Instr where
@@ -43,8 +46,9 @@ inductive Instr where
   | ecall
   deriving DecidableEq, Repr
 
-/-- Decode a 32-bit instruction word for a machine of register width `w`. The width matters only
-for the shift-immediates, whose shift amount has 6 bits when `w = 64` and 5 bits otherwise. -/
+/-- Decode a 32-bit instruction word for a machine of register width `w`. The width matters for
+the shift-immediates, whose shift amount has 6 bits when `w = 64` and 5 bits otherwise, and for
+`ld` and `sd`, which exist only when `w = 64`. -/
 def decode (w : Nat) (i : BitVec 32) : Option Instr :=
   let opcode := i.extractLsb' 0 7
   let rd : Reg := (i.extractLsb' 7 5).toFin
@@ -78,6 +82,7 @@ def decode (w : Nat) (i : BitVec 32) : Option Instr :=
     | 0 => some (.load .byte true rd rs1 immI)
     | 1 => some (.load .half true rd rs1 immI)
     | 2 => some (.load .word true rd rs1 immI)
+    | 3 => if w = 64 then some (.load .dword true rd rs1 immI) else none
     | 4 => some (.load .byte false rd rs1 immI)
     | 5 => some (.load .half false rd rs1 immI)
     | _ => none
@@ -86,6 +91,7 @@ def decode (w : Nat) (i : BitVec 32) : Option Instr :=
     | 0 => some (.store .byte rs2 rs1 immS)
     | 1 => some (.store .half rs2 rs1 immS)
     | 2 => some (.store .word rs2 rs1 immS)
+    | 3 => if w = 64 then some (.store .dword rs2 rs1 immS) else none
     | _ => none
   | 0x13 =>
     -- For a shift, the bits of `immI` above the shift amount select the kind of shift.
@@ -117,6 +123,8 @@ def decode (w : Nat) (i : BitVec 32) : Option Instr :=
     | 5, 0x20 => some (.op .sra rd rs1 rs2)
     | 6, 0x00 => some (.op .or rd rs1 rs2)
     | 7, 0x00 => some (.op .and rd rs1 rs2)
+    | 0, 0x01 => some (.op .mul rd rs1 rs2)
+    | 5, 0x01 => some (.op .divu rd rs1 rs2)
     | _, _ => none
   | _ => if i = 0x00000073 then some .ecall else none
 
@@ -169,6 +177,8 @@ def fail (m : Machine w) : Machine w := { m with status := .fault }
 
 end Machine
 
+/-- `mul` keeps the low `w` bits of the product. `divu` is unsigned division, and division by
+zero gives all ones, as the RISC-V specification and `machine.div` have it. -/
 def alu {w : Nat} (op : AluOp) (a b : BitVec w) : BitVec w :=
   match op with
   | .add => a + b
@@ -181,6 +191,8 @@ def alu {w : Nat} (op : AluOp) (a b : BitVec w) : BitVec w :=
   | .sra => a.sshiftRight (b.toNat % w)
   | .or => a ||| b
   | .and => a &&& b
+  | .mul => a * b
+  | .divu => if b = 0 then BitVec.allOnes w else a / b
 
 def BranchOp.taken {w : Nat} (op : BranchOp) (a b : BitVec w) : Bool :=
   match op with
@@ -195,6 +207,7 @@ def Width.bytes : Width → Nat
   | .byte => 1
   | .half => 2
   | .word => 4
+  | .dword => 8
 
 /-- The little-endian value of the `n` bytes at `addr`, or `none` if any lies outside memory. -/
 def readBytes (mem : Array (BitVec 8)) (addr : Nat) : (n : Nat) → Option (BitVec (8 * n))
