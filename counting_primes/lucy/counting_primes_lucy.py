@@ -5,8 +5,8 @@ arithmetic and printing run as RISC-V instructions. Beyond the base integer
 instructions the program uses mul, divu, ld and sd.
 
 Let r be the largest odd number with r*r <= N, and for a stage prime p let
-S(v) be the number of n in [5, v] with no prime factor below p. Two tables of
-64-bit slots are interleaved from address BASE = 512:
+S(v) be the number of n in [5, v] that are prime or have no prime factor
+below p. Two tables of 64-bit slots are interleaved from address BASE = 512:
 
   small[i] at BASE + 16*i      holds S(2*i + 1)   for 2*i + 1 <= r
   large[k] at BASE + 8*k       holds S(N // k)    for odd k <= r
