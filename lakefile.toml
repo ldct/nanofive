@@ -1,0 +1,56 @@
+name = "tinyfive"
+defaultTargets = ["TinyFive", "Abc101a", "CountingPrimesSimple", "CountingPrimesSieve",
+  "CountingPrimesWheel", "Urlh", "abc101a", "counting_primes_simple", "counting_primes_sieve",
+  "counting_primes_wheel"]
+
+# Shared: the machine model and lemmas more than one project uses.
+[[lean_lib]]
+name = "TinyFive"
+srcDir = "lean"
+
+# One library per project, with its proofs in <project>/lean.
+[[lean_lib]]
+name = "Abc101a"
+srcDir = "abc101a/lean"
+roots = ["Abc101a"]
+
+[[lean_lib]]
+name = "CountingPrimesSimple"
+srcDir = "counting_primes_simple/lean"
+roots = ["CountingPrimes"]
+
+[[lean_lib]]
+name = "CountingPrimesSieve"
+srcDir = "counting_primes_sieve/lean"
+roots = ["CountingPrimesSieve", "SieveCost", "SieveCostBound"]
+
+[[lean_lib]]
+name = "CountingPrimesWheel"
+srcDir = "counting_primes_wheel/lean"
+roots = ["CountingPrimesWheel", "WheelMath"]
+
+[[lean_lib]]
+name = "Urlh"
+srcDir = "urlh/lean"
+roots = ["UrlDecode"]
+
+# Executable models, run by the projects' tests.
+[[lean_exe]]
+name = "abc101a"
+srcDir = "abc101a/lean"
+root = "Abc101aMain"
+
+[[lean_exe]]
+name = "counting_primes_simple"
+srcDir = "counting_primes_simple/lean"
+root = "PrimeMain"
+
+[[lean_exe]]
+name = "counting_primes_sieve"
+srcDir = "counting_primes_sieve/lean"
+root = "SieveMain"
+
+[[lean_exe]]
+name = "counting_primes_wheel"
+srcDir = "counting_primes_wheel/lean"
+root = "WheelMain"

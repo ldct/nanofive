@@ -1,0 +1,20 @@
+#url =>
+    .protocol: "http"
+    .host: "subdomain.host.com"
+    .userinfo: "user:pass"
+    .host: "subdomain.host.com"
+    .port: "8080"
+    .path: "/p/å/t/h"
+    .query[0]: "quëry" -> "strinğ"
+    .query[1]: "foo" -> "bar=yuk"
+    .query[2]: "key#&=" -> "%"
+    .query[3]: "lol" -> ""
+    .fragment: "hæsh"
+#url =>
+    .protocol: "git"
+    .host: "github.com"
+    .userinfo: "git"
+    .host: "github.com"
+    .port: (NULL)
+    .path: "jwerle/url.h.git"
+    .fragment: (NULL)

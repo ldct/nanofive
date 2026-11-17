@@ -1,5 +1,3 @@
-import TinyFive.Abc101a
-
 /-!
 # Instruction budgets for repeated-subtraction trial division
 

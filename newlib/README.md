@@ -1,13 +1,12 @@
 # newlib + printf on nanofive
 
 C programs linked against [newlib](https://sourceware.org/newlib/) run on
-nanofive. newlib's system call stubs (`syscalls.c`) map onto nanofive's
+nanofive. newlib's system call stubs (`../asm/syscalls.c`) map onto nanofive's
 RARS-style ecalls: `_write` -> a7=11 per byte, `_read` -> a7=12, `_exit` ->
 a7=93. Floating-point printf, multithreading and files are left out.
 
-- `crt0.S`     — sets gp/sp, clears .bss, runs constructors, `exit(main())`
-- `syscalls.c` — `_write/_read/_sbrk/_exit` + trivial stubs
-- `link.ld`    — flat 1 MiB memory at address 0, stack at the top
+- `../asm/`    — the startup code, system calls and linker script these
+  programs (and ratpoints and urlh) are linked with; see `../asm/README.md`
 - `hello.c`    — printf/snprintf/malloc test program
 - `hello.elf`  — prebuilt hello.c for rv32im/ilp32, used by the test when no
   RISC-V gcc is installed
@@ -18,7 +17,7 @@ a7=93. Floating-point printf, multithreading and files are left out.
   hello.c actually links (41 sources, listed in `vendor/SOURCES`; license in
   `vendor/COPYING.NEWLIB`). `vendor/build/` holds the configure-generated
   headers (`newlib.h`, `_newlib_version.h`, `targ-include/`).
-- `../newlib_test.py` — compiles vendor/ + hello.c for RV32 and RV64, loads
+- `newlib_test.py` — compiles vendor/ + hello.c for RV32 and RV64, loads
   each ELF into the matching machine, runs it, checks output
 
 ## Run

@@ -7,10 +7,9 @@ and GMP and run on nanofive; its output is byte-identical to a native x86-64
 build of the same source.
 
 - `build.sh`      — downloads and builds everything (below), writes `ratpoints.elf`
-- `crt0.S`        — startup code that passes argc/argv to main
 - `ratpoints.elf` — prebuilt, stripped (350 KB; 8 MiB memory, 256 KiB stack)
 - `expected/`     — outputs of the native build for the test curves
-- `../ratpoints_test.py` — runs the test curves on nanofive and compares
+- `ratpoints_test.py` — runs the test curves on nanofive and compares
 - `build/`        — sources and build trees (gitignored)
 
 ## Run
@@ -57,8 +56,9 @@ build takes a couple of minutes.
    `%f` and parses `-l`/`-u` with `sscanf("%lf")`. Installed into
    `build/newlib`, so the shared `newlib-rv32im` is not touched.
 
-2. **Runtime**: `crt0.S` (here) and `../newlib/syscalls.c` (unchanged), put
-   together in `build/libnanofive.a`. Linked with `../newlib/link.ld` and
+2. **Runtime**: `../asm/crt0_args.S` (startup code that passes argc/argv to
+   main) and `../asm/syscalls.c` (unchanged), put together in
+   `build/libnanofive.a`. Linked with `../asm/link.ld` and
    `--defsym=MEM_SIZE=0x800000 --defsym=STACK_SIZE=0x40000` (8 MiB flat
    memory; the heap of the runs above stays under 1 MiB).
    Link flags: `-nostdlib -nostartfiles -T link.ld -Wl,-u,_start ...
@@ -103,8 +103,8 @@ build takes a couple of minutes.
 nanofive has no OS, so `ratpoints_test.py` passes arguments the way Linux
 does: it writes argc, argv[0..argc-1], NULL and the strings at the top of
 memory and sets sp to point at argc before starting at the ELF entry point.
-`crt0.S` reads them from there, aligns sp down, and calls `main(argc, argv)`;
-if sp is 0 it behaves like `../newlib/crt0.S` (argc = 0). The stack grows
+`../asm/crt0_args.S` reads them from there, aligns sp down, and calls
+`main(argc, argv)`; if sp is 0 it behaves like `../asm/crt0.S` (argc = 0). The stack grows
 down from below the argument block.
 
 ## Limitations

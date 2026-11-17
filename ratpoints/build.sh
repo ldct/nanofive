@@ -65,12 +65,12 @@ NL=$B/newlib/$TARGET
 # startup code + system calls, linked into everything below (also into GMP's
 # configure tests, which link programs)
 if [ ! -f "$B/rt.stamp" ]; then
-  $CC_RV -O2 -c "$HERE/crt0.S" -o "$B/crt0.o"
-  $CC_RV -O2 -isystem "$NL/include" -c "$NANOFIVE/newlib/syscalls.c" -o "$B/syscalls.o"
+  $CC_RV -O2 -c "$NANOFIVE/asm/crt0_args.S" -o "$B/crt0.o"
+  $CC_RV -O2 -isystem "$NL/include" -c "$NANOFIVE/asm/syscalls.c" -o "$B/syscalls.o"
   rm -f "$B/libnanofive.a" && $TARGET-ar rcs "$B/libnanofive.a" "$B/crt0.o" "$B/syscalls.o"
   touch "$B/rt.stamp"
 fi
-LDFLAGS_RV="-nostdlib -nostartfiles -T $NANOFIVE/newlib/link.ld -Wl,--no-warn-rwx-segments"
+LDFLAGS_RV="-nostdlib -nostartfiles -T $NANOFIVE/asm/link.ld -Wl,--no-warn-rwx-segments"
 LDFLAGS_RV="$LDFLAGS_RV -Wl,--defsym=MEM_SIZE=$MEM_SIZE -Wl,--defsym=STACK_SIZE=$STACK_SIZE"
 # crt0.o and syscalls.o are put in an archive, libnanofive.a, and crt0.o is
 # pulled in by -u _start (libtool refuses plain .o files in LDFLAGS)
@@ -117,8 +117,8 @@ INC_RV="-isystem $NL/include -I$B/gmp/include -I$SRC"
 for g in gen_init_sieve_h gen_find_points_h; do
   $CC_RV $RPFLAGS $INC_RV "$SRC/$g.c" -o $g.elf $LDFLAGS_RV $LIBS_RV
 done
-python3 "$NANOFIVE/ratpoints_test.py" --run gen_init_sieve_h.elf > init_sieve.h
-python3 "$NANOFIVE/ratpoints_test.py" --run gen_find_points_h.elf > find_points.h
+python3 "$HERE/ratpoints_test.py" --run gen_init_sieve_h.elf > init_sieve.h
+python3 "$HERE/ratpoints_test.py" --run gen_find_points_h.elf > find_points.h
 INC_RV="-I$RV $INC_RV"  # generated headers first
 $CC_RV $RPFLAGS $INC_RV -funroll-loops -c "$SRC/sift.c"
 $CC_RV $RPFLAGS $INC_RV -funroll-loops -O3 -c "$SRC/init.c"

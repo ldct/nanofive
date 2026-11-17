@@ -274,4 +274,14 @@ def load (w : Nat) (words : List (BitVec 32)) (memSize : Nat) (input : List Char
     output := ""
     status := .running }
 
+/-- Running `a + b` steps is running `a` steps and then `b` more. -/
+theorem run_add {w : Nat} (a b : Nat) (m : Machine w) : run (a + b) m = run b (run a m) := by
+  induction a generalizing m with
+  | zero => simp [run]
+  | succ a ih =>
+    rw [Nat.add_right_comm, run, run]
+    split
+    · exact ih _
+    · cases b <;> simp [run, *]
+
 end TinyFive

@@ -1,0 +1,24 @@
+http://user:pass@subdomain.host.com:8080/p/%C3%A5/t/h?qu%C3%ABry=strin%C4%9F&foo=bar=yuk&key%23%26%3D=%25&lol#h%C3%a6sh
+git://git@github.com:jwerle/url.h.git
+ssh://git@github.com:jwerle/url.h.git
+https://google.com/search?q=github
+https://example.com
+https://example.com/
+http://[::1]:8000/index.html
+http://[2001:db8::7]/c=GB?objectClass?one
+ftp://ftp.is.co.za/rfc/rfc1808.txt
+https://a.b/x?a=1;b=2&c#frag
+https://a.b/x?a=%41%42&b=%zz
+https://a.b/p%2
+https://a.b/#only-fragment
+file:///etc/passwd
+mailto:someone@example.com
+http:/missing-slash.com
+://no-scheme.com
+http://host:port/
+http://host:/
+http://[::1/
+http://bad host.com/
+http://user@
+https://a.b/x y
+javascript://x/%E2%9C%93

@@ -1,0 +1,295 @@
+http://user:pass@subdomain.host.com:8080/p/%C3%A5/t/h?qu%C3%ABry=strin%C4%9F&foo=bar=yuk&key%23%26%3D=%25&lol#h%C3%a6sh
+#url =>
+    .protocol: "http"
+    .host: "subdomain.host.com"
+    .userinfo: "user:pass"
+    .host: "subdomain.host.com"
+    .port: "8080"
+    .path: "/p/å/t/h"
+    .query[0]: "quëry" -> "strinğ"
+    .query[1]: "foo" -> "bar=yuk"
+    .query[2]: "key#&=" -> "%"
+    .query[3]: "lol" -> ""
+    .fragment: "hæsh"
+  is_protocol: 1, is_ssh: 0
+  scheme: "http"
+  userinfo: "user:pass"
+  hostname: "subdomain.host.com"
+  port: "8080"
+  path: "/p/å/t/h"
+  fragment: "hæsh"
+git://git@github.com:jwerle/url.h.git
+#url =>
+    .protocol: "git"
+    .host: "github.com"
+    .userinfo: "git"
+    .host: "github.com"
+    .port: (NULL)
+    .path: "jwerle/url.h.git"
+    .fragment: (NULL)
+  is_protocol: 1, is_ssh: 1
+  scheme: "git"
+  userinfo: "git"
+  hostname: "github.com"
+  port: (NULL)
+  path: "jwerle/url.h.git"
+  fragment: (NULL)
+ssh://git@github.com:jwerle/url.h.git
+#url =>
+    .protocol: "ssh"
+    .host: "github.com"
+    .userinfo: "git"
+    .host: "github.com"
+    .port: (NULL)
+    .path: "jwerle/url.h.git"
+    .fragment: (NULL)
+  is_protocol: 1, is_ssh: 1
+  scheme: "ssh"
+  userinfo: "git"
+  hostname: "github.com"
+  port: (NULL)
+  path: "jwerle/url.h.git"
+  fragment: (NULL)
+https://google.com/search?q=github
+#url =>
+    .protocol: "https"
+    .host: "google.com"
+    .userinfo: (NULL)
+    .host: "google.com"
+    .port: (NULL)
+    .path: "/search"
+    .query[0]: "q" -> "github"
+    .fragment: (NULL)
+  query "q" = "github"
+  is_protocol: 1, is_ssh: 0
+  scheme: "https"
+  userinfo: (NULL)
+  hostname: "google.com"
+  port: (NULL)
+  path: "/search"
+  fragment: (NULL)
+https://example.com
+#url =>
+    .protocol: "https"
+    .host: "example.com"
+    .userinfo: (NULL)
+    .host: "example.com"
+    .port: (NULL)
+    .path: ""
+    .fragment: (NULL)
+  is_protocol: 1, is_ssh: 0
+  scheme: "https"
+  userinfo: (NULL)
+  hostname: "example.com"
+  port: (NULL)
+  path: ""
+  fragment: (NULL)
+https://example.com/
+#url =>
+    .protocol: "https"
+    .host: "example.com"
+    .userinfo: (NULL)
+    .host: "example.com"
+    .port: (NULL)
+    .path: "/"
+    .fragment: (NULL)
+  is_protocol: 1, is_ssh: 0
+  scheme: "https"
+  userinfo: (NULL)
+  hostname: "example.com"
+  port: (NULL)
+  path: "/"
+  fragment: (NULL)
+http://[::1]:8000/index.html
+#url =>
+    .protocol: "http"
+    .host: "::1"
+    .userinfo: (NULL)
+    .host: "::1"
+    .port: "8000"
+    .path: "/index.html"
+    .fragment: (NULL)
+  is_protocol: 1, is_ssh: 0
+  scheme: "http"
+  userinfo: (NULL)
+  hostname: "::1"
+  port: "8000"
+  path: "/index.html"
+  fragment: (NULL)
+http://[2001:db8::7]/c=GB?objectClass?one
+#url =>
+    .protocol: "http"
+    .host: "2001:db8::7"
+    .userinfo: (NULL)
+    .host: "2001:db8::7"
+    .port: (NULL)
+    .path: "/c=GB"
+    .query[0]: "objectClass?one" -> ""
+    .fragment: (NULL)
+  is_protocol: 1, is_ssh: 0
+  scheme: "http"
+  userinfo: (NULL)
+  hostname: "2001:db8::7"
+  port: (NULL)
+  path: "/c=GB"
+  fragment: (NULL)
+ftp://ftp.is.co.za/rfc/rfc1808.txt
+#url =>
+    .protocol: "ftp"
+    .host: "ftp.is.co.za"
+    .userinfo: (NULL)
+    .host: "ftp.is.co.za"
+    .port: (NULL)
+    .path: "/rfc/rfc1808.txt"
+    .fragment: (NULL)
+  is_protocol: 1, is_ssh: 0
+  scheme: "ftp"
+  userinfo: (NULL)
+  hostname: "ftp.is.co.za"
+  port: (NULL)
+  path: "/rfc/rfc1808.txt"
+  fragment: (NULL)
+https://a.b/x?a=1;b=2&c#frag
+#url =>
+    .protocol: "https"
+    .host: "a.b"
+    .userinfo: (NULL)
+    .host: "a.b"
+    .port: (NULL)
+    .path: "/x"
+    .query[0]: "a" -> "1"
+    .query[1]: "b" -> "2"
+    .query[2]: "c" -> ""
+    .fragment: "frag"
+  query "a" = "1"
+  query "b" = "2"
+  is_protocol: 1, is_ssh: 0
+  scheme: "https"
+  userinfo: (NULL)
+  hostname: "a.b"
+  port: (NULL)
+  path: "/x"
+  fragment: "frag"
+https://a.b/x?a=%41%42&b=%zz
+#url =>
+    .protocol: "https"
+    .host: "a.b"
+    .userinfo: (NULL)
+    .host: "a.b"
+    .port: (NULL)
+    .path: "/x"
+    .query[0]: "a" -> "AB"
+    .query[1]: "b" -> (NULL)
+    .fragment: (NULL)
+  query "a" = "AB"
+  is_protocol: 1, is_ssh: 0
+  scheme: "https"
+  userinfo: (NULL)
+  hostname: "a.b"
+  port: (NULL)
+  path: "/x"
+  fragment: (NULL)
+https://a.b/p%2
+#url =>
+    .protocol: "https"
+    .host: "a.b"
+    .userinfo: (NULL)
+    .host: "a.b"
+    .port: (NULL)
+    .path: (NULL)
+    .fragment: (NULL)
+  is_protocol: 1, is_ssh: 0
+  scheme: "https"
+  userinfo: (NULL)
+  hostname: "a.b"
+  port: (NULL)
+  path: (NULL)
+  fragment: (NULL)
+https://a.b/#only-fragment
+#url =>
+    .protocol: "https"
+    .host: "a.b"
+    .userinfo: (NULL)
+    .host: "a.b"
+    .port: (NULL)
+    .path: "/"
+    .fragment: "only-fragment"
+  is_protocol: 1, is_ssh: 0
+  scheme: "https"
+  userinfo: (NULL)
+  hostname: "a.b"
+  port: (NULL)
+  path: "/"
+  fragment: "only-fragment"
+file:///etc/passwd
+#url =>
+    .protocol: "file"
+    .host: ""
+    .userinfo: (NULL)
+    .host: ""
+    .port: (NULL)
+    .path: "/etc/passwd"
+    .fragment: (NULL)
+  is_protocol: 1, is_ssh: 0
+  scheme: "file"
+  userinfo: (NULL)
+  hostname: ""
+  port: (NULL)
+  path: "/etc/passwd"
+  fragment: (NULL)
+mailto:someone@example.com
+ERROR url.c Line 205! p=«someone@example.com»
+  invalid
+http:/missing-slash.com
+ERROR url.c Line 209! p=«missing-slash.com»
+  invalid
+://no-scheme.com
+#url =>
+    .protocol: ""
+    .host: "no-scheme.com"
+    .userinfo: (NULL)
+    .host: "no-scheme.com"
+    .port: (NULL)
+    .path: ""
+    .fragment: (NULL)
+  is_protocol: 0, is_ssh: 0
+  scheme: (NULL)
+  userinfo: (NULL)
+  hostname: "no-scheme.com"
+  port: (NULL)
+  path: ""
+  fragment: (NULL)
+http://host:port/
+ERROR url.c Line 267! p=«host»
+  invalid
+http://host:/
+ERROR url.c Line 267! p=«host»
+  invalid
+http://[::1/
+ERROR url.c Line 234! p=«::1/»
+  invalid
+http://bad host.com/
+ERROR url.c Line 255! p=«bad host.com/»
+  invalid
+http://user@
+ERROR url.c Line 225! p=«»
+  invalid
+https://a.b/x y
+ERROR url.c Line 295! p=«/x y»
+  invalid
+javascript://x/%E2%9C%93
+#url =>
+    .protocol: "javascript"
+    .host: "x"
+    .userinfo: (NULL)
+    .host: "x"
+    .port: (NULL)
+    .path: "/✓"
+    .fragment: (NULL)
+  is_protocol: 1, is_ssh: 0
+  scheme: "javascript"
+  userinfo: (NULL)
+  hostname: "x"
+  port: (NULL)
+  path: "/✓"
+  fragment: (NULL)

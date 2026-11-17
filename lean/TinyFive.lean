@@ -1,5 +1,5 @@
 import TinyFive.Machine
-import TinyFive.Abc101a
-import TinyFive.CountingPrimes
-import TinyFive.CountingPrimesSieve
-import TinyFive.CountingPrimesWheel
+import TinyFive.Primes
+import TinyFive.SieveMath
+import TinyFive.SieveMemory
+import TinyFive.TrialDivisionCost

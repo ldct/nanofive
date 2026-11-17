@@ -2,7 +2,7 @@
 
 ## Goal
 
-`TinyFive/Abc101a.lean` proves `abc101_a` correct on the small machine model of
+`abc101a/lean/Abc101a.lean` proves `abc101_a` correct on the small machine model of
 `TinyFive/Machine.lean`. That model is trusted: nothing says it is RISC-V. The bridge replaces
 that trust with a proof that, for the instructions the program uses, one step of the small model
 is one step of the Sail-generated RISC-V model.

@@ -1,4 +1,4 @@
-import TinyFive.CountingPrimes
+import TinyFive.Primes
 
 /-!
 # Arithmetic invariant for the sieve
