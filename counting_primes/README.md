@@ -1,18 +1,37 @@
 # Counting primes
 
-Three RISC-V RV32I programs that read `N` and print π(N), the number of
+Three RISC-V RV64I programs that read `N` and print π(N), the number of
 primes at most `N`. Each one's loaded machine code is proved correct in Lean
 against the same specification, `CountingPrimes.countPrimes` in
-`../lean/TinyFive/Primes.lean`: for every supported `N` the machine
-terminates, exits with code zero, and prints the count and a newline.
+`../lean/TinyFive/Primes.lean`. Each proof ends in a theorem `correct` of
+the same shape:
 
-| Folder | Algorithm | Code | Supported `N` | Instructions at N = 1,000 |
-|---|---|---|---|---:|
-| `simple/` | trial division by repeated subtraction | 23 instructions (92 bytes) | `0 ≤ N ≤ 2^31 - 2` | 2,799,716 |
-| `sieve/` | byte-array Sieve of Eratosthenes | 25 instructions (100 bytes) | `0 ≤ N ≤ 2^30 - 1` | 16,301 |
-| `wheel/` | sieve visiting only candidates coprime to 30 | 128 bytes + 12-byte gap table | `0 ≤ N ≤ 2^30 - 1` | 12,787 |
+```lean
+theorem correct (n : Nat) (hn : n < 10^11) :
+    ∃ fuel, fuel ≤ <budget> ∧
+      is_exited_with_output (run fuel (initial n)) (toString (countPrimes n) ++ "\n")
+```
 
-None of them uses multiplication, division, a stack, or a library. In each,
+That is, for every `n < 10^11` the machine exits with code zero after
+printing π(n) and a newline, within the budget's number of instructions.
+
+| Folder | Algorithm | Code | Proved budget | Uniform bound (all `n < 10^11`) | Instructions at N = 1,000 |
+|---|---|---|---|---|---:|
+| `simple/` | trial division by repeated subtraction | 23 instructions (92 bytes) | `11 + 114*n*n` | `11 + 114*10^22` ≈ 1.14×10²⁴ | 2,799,716 |
+| `sieve/` | byte-array Sieve of Eratosthenes | 25 instructions (100 bytes) | `13 + 189*n` | `13 + 189*10^11` ≈ 1.89×10¹³ | 16,301 |
+| `wheel/` | sieve visiting only candidates coprime to 30 | 128 bytes + 12-byte gap table | `15 + 191*n` | `15 + 191*10^11` ≈ 1.91×10¹³ | 12,787 |
+
+The uniform bound is the budget at `n = 10^11`; each program's
+`correct_uniform_fuel` proves that this one fuel value works for every input.
+
+The budgets are loose upper bounds. Each one comes from bounding a sum of
+quotients `n/d` by 36 dyadic blocks (`TrialDivisionCost.quotientSum_le_dyadic`),
+which cover every input below `10^11 < 2^37`. The sieve and wheel need
+memory proportional to `n` (about 100 GB near `10^11`), so the proofs cover
+inputs that no test can run.
+
+None of them uses multiplication, division, a stack, or a library, and
+they use only base instructions, so the same words also run on RV32. In each,
 the Python host only parses `N`, sets up memory and puts `N` in `a0`; the
 counting and printing are done by the RISC-V code.
 
@@ -30,8 +49,9 @@ on PATH), and compares the program against an ordinary sieve and against the
 executable Lean model.
 
 Lemmas used by more than one variant are in `../lean/TinyFive/`:
-trial-division budgets (`TrialDivisionCost`), sieve facts (`SieveMath`) and
-memory lemmas (`SieveMemory`).
+quotient-sum and trial-division budgets (`TrialDivisionCost`), sieve facts
+(`SieveMath`) and memory lemmas (`SieveMemory`). `is_exited_with_output` is
+defined in `Machine`.
 
 `../prime_benchmark/` measures these three against six third-party prime
 programs on a common input; the instruction counts above come from there.

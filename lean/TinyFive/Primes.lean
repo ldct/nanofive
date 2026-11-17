@@ -1,9 +1,7 @@
 /-!
-# Prime-counting specification
+# Prime-counting functions
 
-`Prime` and `countPrimes`, the specification that the prime-counting programs
-(`counting_primes_simple`, `counting_primes_sieve`, `counting_primes_wheel`) are proved to meet.
-They stay in the `TinyFive.CountingPrimes` namespace, where the proofs refer to them.
+Definition of the prime-counting function independent of Mathlib
 -/
 namespace TinyFive.CountingPrimes
 
@@ -19,19 +17,14 @@ instance (k : Nat) : Decidable (Prime k) := by
 /-- The finite specification is equivalent to the usual trial-division predicate. -/
 theorem prime_iff (k : Nat) :
     Prime k ↔ 2 ≤ k ∧ ∀ d, 2 ≤ d → d < k → k % d ≠ 0 := by
-  simp only [Prime, List.mem_range]
-  constructor
-  · rintro ⟨hk, h⟩
-    exact ⟨hk, fun d hd hdk => h d hdk hd⟩
-  · rintro ⟨hk, h⟩
-    exact ⟨hk, fun d hdk hd => h d hd hdk⟩
+  grind [Prime]
 
 /-- Equivalently, no natural number strictly between 1 and `k` divides `k`. -/
 theorem prime_iff_no_proper_divisor (k : Nat) :
     Prime k ↔ 2 ≤ k ∧ ∀ d, 2 ≤ d → d < k → ¬ d ∣ k := by
-  simp only [prime_iff, Nat.dvd_iff_mod_eq_zero]
+  grind [prime_iff, Nat.dvd_iff_mod_eq_zero]
 
-/-- Number of primes at most `n`, independently of the machine's loop state. -/
+/-- The prime-counting function (https://en.wikipedia.org/wiki/Prime-counting_function). -/
 def countPrimes : Nat → Nat
   | 0 => 0
   | n + 1 => countPrimes n + if Prime (n+1) then 1 else 0

@@ -2,7 +2,7 @@ import TinyFive.Primes
 import TinyFive.TrialDivisionCost
 
 /-!
-# An executable instruction budget for the RV32 sieve
+# An executable instruction budget for the sieve
 
 These arithmetic functions count the blocks traversed by the machine proof.
 Bounds below are bounds on this budget; minimality of execution time is not
@@ -159,15 +159,6 @@ theorem instructionCount_le_600 (n : Nat) (hn : n ≤ 600) :
 theorem instructionCount_lt_10000 (n : Nat) (hn : n ≤ 600) :
     instructionCount n < 10000 := by
   have := instructionCount_le_600 n hn
-  omega
-
-/-- A loose uniform budget for the complete memory-safe RV32 input range. -/
-theorem instructionCount_rv32_cap (n : Nat) (hn : n ≤ 2^30-1) :
-    instructionCount n < 2^63 := by
-  have h1 : n-1 ≤ 2^30-2 := by omega
-  have h2 : 9+5*n ≤ 9+5*(2^30-1) := by omega
-  have hmul := Nat.mul_le_mul h1 h2
-  have hbound := instructionCount_upper n
   omega
 
 end TinyFive.SieveCost

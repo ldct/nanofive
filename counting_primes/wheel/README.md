@@ -1,4 +1,4 @@
-# RV32I mod-30 candidate-wheel sieve
+# RV64I mod-30 candidate-wheel sieve
 
 ```sh
 printf '100\n' | python counting_primes_wheel.py
@@ -6,15 +6,15 @@ printf '100\n' | python counting_primes_wheel.py
 python counting_primes_wheel_test.py
 ```
 
-This variant has **128 bytes of RV32I code and a 12-byte immutable gap
+This variant has **128 bytes of RV64I code and a 12-byte immutable gap
 table**. The host allocates `256 + N + 1` zeroed bytes, loads that image,
 and preloads `N` in `a0`. All candidate stepping, flag reads, composite
 marking, counting, and output execute as RISC-V instructions.
 
-The supported range is unchanged from the plain sieve:
-**`0 ≤ N ≤ 2^30 - 1`**. Flags begin at address 256; zero means unmarked,
+The supported range is the same as the plain sieve's:
+**`0 ≤ N < 10^11`**. Flags begin at address 256; zero means unmarked,
 one means composite. Large inputs still require memory proportional to
-`N`, and may exceed the host's available memory.
+`N` (about 100 GB near `10^11`), and may exceed the host's available memory.
 
 ## What the wheel optimizes
 
@@ -43,16 +43,18 @@ external library is used.
 `lean/CountingPrimesWheel.lean` proves:
 
 ```lean
-CountingPrimesWheel.correct (n : Nat) (hn : n ≤ 2^30 - 1) :
-  ∃ fuel, (run fuel (initial n)).status = .exited 0 ∧
-    (run fuel (initial n)).output =
-      toString (CountingPrimes.countPrimes n) ++ "\n"
+CountingPrimesWheel.correct (n : Nat) (hn : n < 10^11) :
+  ∃ fuel, fuel ≤ 15 + 191*n ∧
+    is_exited_with_output (run fuel (initial n))
+      (toString (CountingPrimes.countPrimes n) ++ "\n")
 ```
 
 This is a theorem about the actual loaded instruction words and mutable
 byte memory in `TinyFive.Machine`, not merely an abstract wheel algorithm.
-It covers termination, exit status, and exact prime-count output for every
-supported input, including 0 and 1. There is no fuel or termination premise.
+It covers termination, exit status, exact prime-count output and an
+instruction budget for every supported input, including 0 and 1. There is
+no fuel or termination premise. `correct_uniform_fuel` gives one fuel value,
+`15 + 191*10^11`, that works for every input.
 
 The invariant states:
 
@@ -100,9 +102,14 @@ The test's independent path-count formula is
 
 The fixed 15 is initialization (6) plus final branch/printing/exit (9).
 A normal phase update takes five instructions; wrapping takes seven.
-This formula is checked against execution, **not formally proved** as a
-runtime theorem for this new variant. The correctness theorem proves
-termination but does not provide a numerical instruction bound.
+This exact formula is checked against execution but **not formally
+proved**. The proof instead establishes the upper bound `15 + 191*N`: a
+visited candidate `p` costs at most `11 + 5*floor(N/p)` (four instructions
+to test its flag, up to seven to step the wheel, and the marking loop for a
+prime). Charging that cost to every integer from 2 to `N`, not only to
+wheel candidates, overcounts; the 36 dyadic blocks shared with the other
+two programs then bound the quotient sum by `36*N`. The tests also check
+every measured count against this budget.
 
 ## Verification boundary
 

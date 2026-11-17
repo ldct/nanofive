@@ -5,16 +5,17 @@ import TinyFive.TrialDivisionCost
 /-!
 # Correctness of `counting_primes_simple.py`
 
-The exact RV32I instruction words below implement trial division by repeated subtraction.
+The exact RV64I instruction words below implement trial division by repeated subtraction.
 `correct` connects the loaded machine, not a separate interpreter, to the prime-counting
 specification. Inputs are preloaded in `a0`, as by the Python wrapper.
 
 ## Statement and boundary
 
 `correct` proves termination, exit code zero, and exact decimal output followed by a newline,
-for every natural input `n ≤ 2^31-2` (including zero and one). `prime_iff_no_proper_divisor`
-identifies the prime predicate with conventional natural-number divisibility. This proof is
-RV32 only; the bound keeps the incremented candidate and signed printed count in range.
+within `11 + 114*n*n` instructions, for every natural input `n < 10^11` (including zero and
+one). `prime_iff_no_proper_divisor` identifies the prime predicate with conventional
+natural-number divisibility. The machine is RV64; the input bound keeps the incremented
+candidate and the signed printed count far inside 64 bits.
 
 The instruction bytes, decoding, arithmetic, branches, and modeled system calls are all covered
 by the proof. The boundary is the semantics of `TinyFive.Machine`: equivalence of that model
@@ -27,18 +28,17 @@ No execution-fuel assumption is required.
 
 ## Instruction bound
 
-`correct_bounded` strengthens the same machine execution with budget
+`correct_bounded` gives the machine execution with budget
 `11 + (n-1)*(6 + scanCost n 2 (n-2))`, where the scan sums
-`6 + 3*(n/d)` over the possible divisors. Thirty dyadic blocks bound the
-quotient sum by `30*n` on the full input domain. Consequently
-`correct_quadratic_bound` gives `11 + (n-1)*(6 + 96*n)`, and
-`correct_numeric_bound` gives a uniform cap of `442721856751121990201 < 2^69`.
-Natural subtraction is truncated, so the formulas also cover zero and one.
+`6 + 3*(n/d)` over the possible divisors. Thirty-six dyadic blocks bound the
+quotient sum by `36*n` below `10^11 < 2^37`, which gives `correct`'s `11 + 114*n*n`.
+`correct_dyadic_bound` uses fewer blocks for smaller inputs, and `correct_uniform_fuel`
+gives one fuel value for every input. Natural subtraction is truncated, so the formulas also
+cover zero and one.
 
-The unit is one modeled RV32 instruction, including each `ecall` as one
+The unit is one modeled RV64 instruction, including each `ecall` as one
 instruction. Host input parsing, allocation/loading, emulator overhead, and
-the host work performed by printing are not included. The budgets are upper
-bounds, not claims of exact or minimal running time.
+the host work performed by printing are not included. The budgets are loose upper bounds.
 -/
 namespace TinyFive.CountingPrimes
 
@@ -52,11 +52,11 @@ def prog : List (BitVec 32) := [
   0x00030513, 0x00100893, 0x00000073, 0x00a00513, 0x00b00893,
   0x00000073, 0x00a00893, 0x00000073]
 
-/-- State after the wrapper has preloaded the nonnegative input. -/
-def initial (n : Nat) : Machine 32 :=
-  (load 32 prog 128 []).setReg 10 (BitVec.ofNat 32 n)
+/-- Machine state with `prog` loaded. -/
+def initial (n : Nat) : Machine 64 :=
+  (load 64 prog 128 []).setReg 10 (BitVec.ofNat 64 n)
 
-def image : Array (BitVec 8) := (load 32 prog 128 []).mem
+def image : Array (BitVec 8) := (load 64 prog 128 []).mem
 
 def code : List Instr := [
   .opImm .add 5 0 2, .opImm .add 6 0 0,
@@ -71,10 +71,10 @@ def code : List Instr := [
 
 /-- Decoding is checked by kernel evaluation at every instruction address. -/
 theorem fetch : ∀ pc, pc < 92 → pc % 4 = 0 →
-    (readBytes image pc 4).bind (decode 32) = some (code.getD (pc / 4) .ecall) := by
+    (readBytes image pc 4).bind (decode 64) = some (code.getD (pc / 4) .ecall) := by
   decide +kernel
 
-theorem step_image (x : Regs 32) (pc : BitVec 32) (out : String) (st : Status)
+theorem step_image (x : Regs 64) (pc : BitVec 64) (out : String) (st : Status)
     (h : pc.toNat < 92) (h4 : pc.toNat % 4 = 0) :
     step ⟨x, pc, image, [], out, st⟩ =
       exec (code.getD (pc.toNat / 4) .ecall) ⟨x, pc, image, [], out, st⟩ := by
@@ -85,19 +85,19 @@ macro "prime_exec" : tactic =>
       Machine.fail, alu, ecall, Regs.get_set, BranchOp.taken, *])
 
 /-- The three registers live throughout the nested loops. -/
-def Inv (x : Regs 32) (n k c : Nat) : Prop :=
-  x.get 10 = BitVec.ofNat 32 n ∧ x.get 5 = BitVec.ofNat 32 k ∧
-    x.get 6 = BitVec.ofNat 32 c
+def Inv (x : Regs 64) (n k c : Nat) : Prop :=
+  x.get 10 = BitVec.ofNat 64 n ∧ x.get 5 = BitVec.ofNat 64 k ∧
+    x.get 6 = BitVec.ofNat 64 c
 
-private theorem rem_less (x : Regs 32) (out : String)
+private theorem rem_less (x : Regs 64) (out : String)
     (h : (x.get 28).ult (x.get 7) = true) :
     run 1 ⟨x, 24, image, [], out, .running⟩ =
       ⟨x, 36, image, [], out, .running⟩ := by
   prime_exec
 
-private theorem rem_sub (x : Regs 32) (out : String)
+private theorem rem_sub (x : Regs 64) (out : String)
     (h : (x.get 28).ult (x.get 7) = false) :
-    ∃ x' : Regs 32, x'.get 10 = x.get 10 ∧ x'.get 5 = x.get 5 ∧
+    ∃ x' : Regs 64, x'.get 10 = x.get 10 ∧ x'.get 5 = x.get 5 ∧
       x'.get 6 = x.get 6 ∧ x'.get 7 = x.get 7 ∧
       x'.get 28 = x.get 28 - x.get 7 ∧
       run 3 ⟨x, 24, image, [], out, .running⟩ =
@@ -105,54 +105,54 @@ private theorem rem_sub (x : Regs 32) (out : String)
   refine ⟨(x.set 28 (x.get 28 - x.get 7)).set 0 36, ?_⟩
   prime_exec
 
-private theorem trial_start (x : Regs 32) (out : String)
+private theorem trial_start (x : Regs 64) (out : String)
     (h : x.get 7 ≠ x.get 5) :
-    ∃ x' : Regs 32, x'.get 10 = x.get 10 ∧ x'.get 5 = x.get 5 ∧
+    ∃ x' : Regs 64, x'.get 10 = x.get 10 ∧ x'.get 5 = x.get 5 ∧
       x'.get 6 = x.get 6 ∧ x'.get 7 = x.get 7 ∧ x'.get 28 = x.get 5 ∧
       run 2 ⟨x, 16, image, [], out, .running⟩ =
         ⟨x', 24, image, [], out, .running⟩ := by
   refine ⟨x.set 28 (x.get 5), ?_⟩
   prime_exec
 
-private theorem trial_zero (x : Regs 32) (out : String) (h : x.get 28 = 0) :
+private theorem trial_zero (x : Regs 64) (out : String) (h : x.get 28 = 0) :
     run 1 ⟨x, 36, image, [], out, .running⟩ =
       ⟨x, 52, image, [], out, .running⟩ := by
   prime_exec
 
-private theorem trial_nonzero (x : Regs 32) (out : String) (h : x.get 28 ≠ 0#32) :
-    ∃ x' : Regs 32, x'.get 10 = x.get 10 ∧ x'.get 5 = x.get 5 ∧
+private theorem trial_nonzero (x : Regs 64) (out : String) (h : x.get 28 ≠ 0#64) :
+    ∃ x' : Regs 64, x'.get 10 = x.get 10 ∧ x'.get 5 = x.get 5 ∧
       x'.get 6 = x.get 6 ∧ x'.get 7 = x.get 7 + 1 ∧
       run 3 ⟨x, 36, image, [], out, .running⟩ =
         ⟨x', 16, image, [], out, .running⟩ := by
   refine ⟨(x.set 7 (x.get 7 + 1)).set 0 48, ?_⟩
   prime_exec
 
-private theorem trial_prime (x : Regs 32) (out : String) (h : x.get 7 = x.get 5) :
-    ∃ x' : Regs 32, x'.get 10 = x.get 10 ∧ x'.get 5 = x.get 5 ∧
+private theorem trial_prime (x : Regs 64) (out : String) (h : x.get 7 = x.get 5) :
+    ∃ x' : Regs 64, x'.get 10 = x.get 10 ∧ x'.get 5 = x.get 5 ∧
       x'.get 6 = x.get 6 + 1 ∧
       run 2 ⟨x, 16, image, [], out, .running⟩ =
         ⟨x', 52, image, [], out, .running⟩ := by
   refine ⟨x.set 6 (x.get 6 + 1), ?_⟩
   prime_exec
 
-private theorem outer_start (x : Regs 32) (out : String)
+private theorem outer_start (x : Regs 64) (out : String)
     (h : (x.get 10).ult (x.get 5) = false) :
-    ∃ x' : Regs 32, x'.get 10 = x.get 10 ∧ x'.get 5 = x.get 5 ∧
+    ∃ x' : Regs 64, x'.get 10 = x.get 10 ∧ x'.get 5 = x.get 5 ∧
       x'.get 6 = x.get 6 ∧ x'.get 7 = 2 ∧
       run 2 ⟨x, 8, image, [], out, .running⟩ =
         ⟨x', 16, image, [], out, .running⟩ := by
   refine ⟨x.set 7 2, ?_⟩
   prime_exec
 
-private theorem outer_next (x : Regs 32) (out : String) :
-    ∃ x' : Regs 32, x'.get 10 = x.get 10 ∧ x'.get 5 = x.get 5 + 1 ∧
+private theorem outer_next (x : Regs 64) (out : String) :
+    ∃ x' : Regs 64, x'.get 10 = x.get 10 ∧ x'.get 5 = x.get 5 + 1 ∧
       x'.get 6 = x.get 6 ∧
       run 2 ⟨x, 52, image, [], out, .running⟩ =
         ⟨x', 8, image, [], out, .running⟩ := by
   refine ⟨(x.set 5 (x.get 5 + 1)).set 0 60, ?_⟩
   prime_exec
 
-private theorem outer_done (x : Regs 32) (out : String)
+private theorem outer_done (x : Regs 64) (out : String)
     (h : (x.get 10).ult (x.get 5) = true) :
     (run 9 ⟨x, 8, image, [], out, .running⟩).status = .exited 0 ∧
     (run 9 ⟨x, 8, image, [], out, .running⟩).output =
@@ -161,18 +161,18 @@ private theorem outer_done (x : Regs 32) (out : String)
   rfl
 
 /-- Unsigned arithmetic agrees with natural subtraction when there is no underflow. -/
-private theorem nat_sub (r d : Nat) (hr : r < 2^32) (hd : d ≤ r) :
-    BitVec.ofNat 32 r - BitVec.ofNat 32 d = BitVec.ofNat 32 (r - d) := by
+private theorem nat_sub (r d : Nat) (hr : r < 2^64) (hd : d ≤ r) :
+    BitVec.ofNat 64 r - BitVec.ofNat 64 d = BitVec.ofNat 64 (r - d) := by
   apply BitVec.eq_of_toNat_eq
   simp only [BitVec.toNat_sub, BitVec.toNat_ofNat]
   omega
 
-private theorem nat_ult (a b : Nat) (ha : a < 2^32) (hb : b < 2^32) :
-    (BitVec.ofNat 32 a).ult (BitVec.ofNat 32 b) = decide (a < b) := by
+private theorem nat_ult (a b : Nat) (ha : a < 2^64) (hb : b < 2^64) :
+    (BitVec.ofNat 64 a).ult (BitVec.ofNat 64 b) = decide (a < b) := by
   simp [BitVec.ult, Nat.mod_eq_of_lt ha, Nat.mod_eq_of_lt hb]
 
-private theorem nat_ne (a b : Nat) (ha : a < 2^32) (hb : b < 2^32) (hne : a ≠ b) :
-    BitVec.ofNat 32 a ≠ BitVec.ofNat 32 b := by
+private theorem nat_ne (a b : Nat) (ha : a < 2^64) (hb : b < 2^64) (hne : a ≠ b) :
+    BitVec.ofNat 64 a ≠ BitVec.ofNat 64 b := by
   intro he
   have := congrArg BitVec.toNat he
   simp only [BitVec.toNat_ofNat, Nat.mod_eq_of_lt ha, Nat.mod_eq_of_lt hb] at this
@@ -180,13 +180,13 @@ private theorem nat_ne (a b : Nat) (ha : a < 2^32) (hb : b < 2^32) (hne : a ≠ 
 
 /-- The subtraction loop terminates with the mathematical remainder in `t3`.
 The live input, candidate, count, and divisor registers are preserved. -/
-private theorem rem_correct (r d : Nat) (hd : 0 < d) (hd32 : d < 2^32)
-    (x : Regs 32) (out : String) (hr : r < 2^32)
-    (hxr : x.get 28 = BitVec.ofNat 32 r) (hxd : x.get 7 = BitVec.ofNat 32 d) :
+private theorem rem_correct (r d : Nat) (hd : 0 < d) (hd64 : d < 2^64)
+    (x : Regs 64) (out : String) (hr : r < 2^64)
+    (hxr : x.get 28 = BitVec.ofNat 64 r) (hxd : x.get 7 = BitVec.ofNat 64 d) :
     ∃ fuel x', fuel = 1+3*(r/d) ∧
       x'.get 10 = x.get 10 ∧ x'.get 5 = x.get 5 ∧
       x'.get 6 = x.get 6 ∧ x'.get 7 = x.get 7 ∧
-      x'.get 28 = BitVec.ofNat 32 (r % d) ∧
+      x'.get 28 = BitVec.ofNat 64 (r % d) ∧
       run fuel ⟨x, 24, image, [], out, .running⟩ =
         ⟨x', 36, image, [], out, .running⟩ := by
   induction r using Nat.strongRecOn generalizing x with
@@ -195,14 +195,14 @@ private theorem rem_correct (r d : Nat) (hd : 0 < d) (hd32 : d < 2^32)
     · refine ⟨1, x, by simp [Nat.div_eq_of_lt hlt], rfl, rfl, rfl, rfl, ?_, ?_⟩
       · simpa [Nat.mod_eq_of_lt hlt] using hxr
       · apply rem_less
-        rw [hxr, hxd, nat_ult r d hr hd32]
+        rw [hxr, hxd, nat_ult r d hr hd64]
         simp [hlt]
     · have hge : d ≤ r := by omega
       have hbranch : (x.get 28).ult (x.get 7) = false := by
-        rw [hxr, hxd, nat_ult r d hr hd32]
+        rw [hxr, hxd, nat_ult r d hr hd64]
         simp [hlt]
       obtain ⟨x', h10, h5, h6, h7, h28, hs⟩ := rem_sub x out hbranch
-      have hxr' : x'.get 28 = BitVec.ofNat 32 (r-d) := by
+      have hxr' : x'.get 28 = BitVec.ofNat 64 (r-d) := by
         rw [h28, hxr, hxd, nat_sub r d hr hge]
       obtain ⟨fuel, x'', hfuel, g10, g5, g6, g7, g28, ht⟩ :=
         ih (r-d) (by omega) x' (by omega) hxr' (h7.trans hxd)
@@ -219,10 +219,10 @@ private def NoDivisor (k d : Nat) : Prop :=
 
 /-- The complete divisor scan terminates at the candidate-update block. It increments
 `t1` exactly when the mathematical candidate is prime. -/
-private theorem trial_correct (k d : Nat) (hk : 2 ≤ k) (hk32 : k < 2^32)
+private theorem trial_correct (k d : Nat) (hk : 2 ≤ k) (hk64 : k < 2^64)
     (hd : 2 ≤ d) (hdk : d ≤ k) (hnodiv : NoDivisor k d)
-    (n c : Nat) (x : Regs 32) (out : String) (hinv : Inv x n k c)
-    (hxd : x.get 7 = BitVec.ofNat 32 d) :
+    (n c : Nat) (x : Regs 64) (out : String) (hinv : Inv x n k c)
+    (hxd : x.get 7 = BitVec.ofNat 64 d) :
     ∃ fuel x', fuel ≤ 2+scanCost k d (k-d) ∧
       Inv x' n k (c + if Prime k then 1 else 0) ∧
       run fuel ⟨x, 16, image, [], out, .running⟩ =
@@ -238,15 +238,15 @@ private theorem trial_correct (k d : Nat) (hk : 2 ≤ k) (hk32 : k < 2^32)
   · have hlt : d < k := by omega
     have hreg : x.get 7 ≠ x.get 5 := by
       rw [hxd, hinv.2.1]
-      exact nat_ne d k (by omega) hk32 heq
+      exact nat_ne d k (by omega) hk64 heq
     obtain ⟨x', h10, h5, h6, h7, h28, hs⟩ := trial_start x out hreg
     obtain ⟨fuel, x'', hfuel, g10, g5, g6, g7, g28, ht⟩ :=
-      rem_correct k d (by omega) (by omega) x' out hk32
+      rem_correct k d (by omega) (by omega) x' out hk64
         (h28.trans hinv.2.1) (h7.trans hxd)
     have hi : Inv x'' n k c :=
       ⟨g10.trans (h10.trans hinv.1), g5.trans (h5.trans hinv.2.1),
         g6.trans (h6.trans hinv.2.2)⟩
-    have hdreg : x''.get 7 = BitVec.ofNat 32 d := g7.trans (h7.trans hxd)
+    have hdreg : x''.get 7 = BitVec.ofNat 64 d := g7.trans (h7.trans hxd)
     by_cases hz : k % d = 0
     · have hnp : ¬ Prime k := by
         intro hp
@@ -259,13 +259,13 @@ private theorem trial_correct (k d : Nat) (hk : 2 ≤ k) (hk32 : k < 2^32)
         omega
       · simpa [hnp] using hi
       · rw [run_add, run_add, hs, ht, trial_zero x'' out hzreg]
-    · have hnzreg : x''.get 28 ≠ 0#32 := by
+    · have hnzreg : x''.get 28 ≠ 0#64 := by
         rw [g28]
         exact nat_ne (k%d) 0 (by have := Nat.mod_lt k (show 0 < d by omega); omega)
           (by decide) hz
       obtain ⟨y, j10, j5, j6, j7, hu⟩ := trial_nonzero x'' out hnzreg
       have hj : Inv y n k c := ⟨j10.trans hi.1, j5.trans hi.2.1, j6.trans hi.2.2⟩
-      have hjd : y.get 7 = BitVec.ofNat 32 (d+1) := by
+      have hjd : y.get 7 = BitVec.ofNat 64 (d+1) := by
         rw [j7, hdreg, BitVec.ofNat_add]
         rfl
       have hnodiv' : NoDivisor k (d+1) := by
@@ -275,7 +275,7 @@ private theorem trial_correct (k d : Nat) (hk : 2 ≤ k) (hk32 : k < 2^32)
         · have : e = d := by omega
           simpa [this] using hz
       obtain ⟨more, z, hmore, hz, hv⟩ :=
-        trial_correct k (d+1) hk hk32 (by omega) (by omega) hnodiv' n c y out hj hjd
+        trial_correct k (d+1) hk hk64 (by omega) (by omega) hnodiv' n c y out hj hjd
       have hscan : scanCost k d (k-d) = 6+3*(k/d)+scanCost k (d+1) (k-(d+1)) := by
         rw [show k-d = (k-(d+1))+1 by omega, scanCost_succ]
       refine ⟨2 + fuel + 3 + more, z, ?_, hz, ?_⟩
@@ -284,11 +284,11 @@ private theorem trial_correct (k d : Nat) (hk : 2 ≤ k) (hk32 : k < 2^32)
       · rw [run_add, run_add, run_add, hs, ht, hu, hv]
 termination_by k-d
 
-private theorem toInt_nat (c : Nat) (hc : c < 2^31) :
-    (BitVec.ofNat 32 c).toInt = (c : Int) := by
+private theorem toInt_nat (c : Nat) (hc : c < 2^63) :
+    (BitVec.ofNat 64 c).toInt = (c : Int) := by
   rw [BitVec.toInt_eq_toNat_cond]
-  have h32 : c < 2^32 := by omega
-  simp [BitVec.toNat_ofNat, Nat.mod_eq_of_lt h32, show 2*c < 2^32 by omega]
+  have h64 : c < 2^64 := by omega
+  simp [BitVec.toNat_ofNat, Nat.mod_eq_of_lt h64, show 2*c < 2^64 by omega]
 
 private theorem nat_int_string (c : Nat) : toString (c : Int) = toString c := rfl
 
@@ -300,33 +300,33 @@ private theorem countPrimes_step (k : Nat) (hk : 0 < k) :
 
 /-- From the outer loop, `t1` counts exactly the primes below `t0`. The variant
 `n+1-k` decreases on each candidate, and every nested scan terminates. -/
-private theorem outer_correct (n k : Nat) (hn : n ≤ 2^31-2) (hk : 2 ≤ k)
-    (hkn : k ≤ n+1) (x : Regs 32) (out : String)
+private theorem outer_correct (n k : Nat) (hn : n < 10^11) (hk : 2 ≤ k)
+    (hkn : k ≤ n+1) (x : Regs 64) (out : String)
     (hinv : Inv x n k (countPrimes (k-1))) :
     ∃ fuel, fuel ≤ 9+(n+1-k)*(6+scanCost n 2 (n-2)) ∧
       (run fuel ⟨x, 8, image, [], out, .running⟩).status = .exited 0 ∧
       (run fuel ⟨x, 8, image, [], out, .running⟩).output =
         out ++ toString (countPrimes n) ++ "\n" := by
-  have hn32 : n < 2^32 := by omega
-  have hk32 : k < 2^32 := by omega
+  have hn64 : n < 2^64 := by omega
+  have hk64 : k < 2^64 := by omega
   by_cases hdone : n < k
   · have he : k-1 = n := by omega
     have hbranch : (x.get 10).ult (x.get 5) = true := by
-      rw [hinv.1, hinv.2.1, nat_ult n k hn32 hk32]
+      rw [hinv.1, hinv.2.1, nat_ult n k hn64 hk64]
       simp [hdone]
-    have hc : countPrimes n < 2^31 := by have := countPrimes_le n; omega
+    have hc : countPrimes n < 2^63 := by have := countPrimes_le n; omega
     refine ⟨9, by omega, ?_⟩
     simpa only [hinv.2.2, he, toInt_nat _ hc, nat_int_string] using outer_done x out hbranch
   · have hnk : k ≤ n := by omega
     have hbranch : (x.get 10).ult (x.get 5) = false := by
-      rw [hinv.1, hinv.2.1, nat_ult n k hn32 hk32]
+      rw [hinv.1, hinv.2.1, nat_ult n k hn64 hk64]
       simp [hdone]
     obtain ⟨x', h10, h5, h6, h7, hs⟩ := outer_start x out hbranch
     have hi : Inv x' n k (countPrimes (k-1)) :=
       ⟨h10.trans hinv.1, h5.trans hinv.2.1, h6.trans hinv.2.2⟩
     have hnodiv : NoDivisor k 2 := by intro e he he2; omega
     obtain ⟨fuel, y, hfuel, hy, ht⟩ :=
-      trial_correct k 2 hk hk32 (by decide) (by omega) hnodiv n
+      trial_correct k 2 hk hk64 (by decide) (by omega) hnodiv n
         (countPrimes (k-1)) x' out hi h7
     have hcount := countPrimes_step k (by omega)
     have hy' : Inv y n k (countPrimes k) := by simpa [← hcount] using hy
@@ -351,21 +351,20 @@ termination_by n+1-k
 private theorem initialize_regs (n : Nat) :
     ∃ x, Inv x n 2 0 ∧ run 2 (initial n) =
       ⟨x, 8, image, [], "", .running⟩ := by
-  let x : Regs 32 := (⟨Vector.replicate 32 0⟩ : Regs 32).set 10 (BitVec.ofNat 32 n)
+  let x : Regs 64 := (⟨Vector.replicate 32 0⟩ : Regs 64).set 10 (BitVec.ofNat 64 n)
   have hi : initial n = ⟨x, 0, image, [], "", .running⟩ := rfl
   rw [hi]
   refine ⟨(x.set 5 2).set 6 0, ?_, ?_⟩
   · simp [Inv, x, Regs.get_set]
   · prime_exec
 
-/-- **RV32 machine correctness.** For every input up to `2^31-2`, the actual loaded
-instruction words terminate with exit code zero and print the number of primes at most
-`n`, followed by a newline, within `instructionBound n` modeled instructions.
-No fuel or termination hypothesis is assumed. -/
-theorem correct_bounded (n : Nat) (hn : n ≤ 2^31-2) :
+
+/-- The loaded instruction words exit with code zero after printing `π(n)` and a newline,
+within the input-dependent budget `instructionBound n`. No fuel or termination hypothesis is
+assumed. -/
+theorem correct_bounded (n : Nat) (hn : n < 10^11) :
     ∃ fuel, fuel ≤ instructionBound n ∧
-      (run fuel (initial n)).status = .exited 0 ∧
-      (run fuel (initial n)).output = toString (countPrimes n) ++ "\n" := by
+      is_exited_with_output (run fuel (initial n)) (toString (countPrimes n) ++ "\n") := by
   obtain ⟨x, hx, hs⟩ := initialize_regs n
   by_cases hsmall : n < 2
   · have hc : countPrimes n = 0 := by
@@ -388,43 +387,29 @@ theorem correct_bounded (n : Nat) (hn : n ≤ 2^31-2) :
     · rw [run_add, hs]
       simpa using hf
 
-/-- Original correctness API, now obtained from the instruction-bounded proof. -/
-theorem correct (n : Nat) (hn : n ≤ 2^31-2) :
-    ∃ fuel, (run fuel (initial n)).status = .exited 0 ∧
-      (run fuel (initial n)).output = toString (countPrimes n) ++ "\n" := by
-  obtain ⟨fuel, _, h⟩ := correct_bounded n hn
-  exact ⟨fuel, h⟩
-
-/-- Actual loaded-machine execution, with an input-dependent RV32 instruction bound. -/
-theorem correct_quadratic_bound (n : Nat) (hn : n ≤ 2^31-2) :
-    ∃ fuel, fuel ≤ 11+(n-1)*(6+96*n) ∧
-      (run fuel (initial n)).status = .exited 0 ∧
-      (run fuel (initial n)).output = toString (countPrimes n) ++ "\n" := by
+/-- **Correctness with an instruction budget.** For every input below `10^11`, the loaded
+RV64I program exits with code zero after printing `π(n)` and a newline, within
+`11 + 114*n*n` modeled instructions. -/
+theorem correct (n : Nat) (hn : n < 10^11) :
+    ∃ fuel, fuel ≤ 11+114*n*n ∧
+      is_exited_with_output (run fuel (initial n)) (toString (countPrimes n) ++ "\n") := by
   obtain ⟨fuel, hb, h⟩ := correct_bounded n hn
-  exact ⟨fuel, Nat.le_trans hb (instructionBound_rv32_quadratic n hn), h⟩
+  exact ⟨fuel, Nat.le_trans hb (instructionBound_le n hn), h⟩
 
-/-- A logarithmic-block bound for the actual loaded machine. -/
-theorem correct_dyadic_bound (n k : Nat) (hn : n ≤ 2^31-2) (hk : n < 2^(k+1)) :
+/-- A logarithmic-block bound, tighter than `correct`'s for small inputs. -/
+theorem correct_dyadic_bound (n k : Nat) (hn : n < 10^11) (hk : n < 2^(k+1)) :
     ∃ fuel, fuel ≤ 11+(n-1)*(6+6*(n-2)+3*k*n) ∧
-      (run fuel (initial n)).status = .exited 0 ∧
-      (run fuel (initial n)).output = toString (countPrimes n) ++ "\n" := by
+      is_exited_with_output (run fuel (initial n)) (toString (countPrimes n) ++ "\n") := by
   obtain ⟨fuel, hb, h⟩ := correct_bounded n hn
   exact ⟨fuel, Nat.le_trans hb (instructionBound_dyadic n k hk), h⟩
 
-/-- Explicit numerical instruction cap for the entire supported domain. -/
-theorem correct_numeric_bound (n : Nat) (hn : n ≤ 2^31-2) :
-    ∃ fuel, fuel ≤ 442721856751121990201 ∧
-      (run fuel (initial n)).status = .exited 0 ∧
-      (run fuel (initial n)).output = toString (countPrimes n) ++ "\n" := by
-  obtain ⟨fuel, hb, h⟩ := correct_bounded n hn
-  exact ⟨fuel, Nat.le_trans hb (instructionBound_rv32_bound n hn), h⟩
-
-/-- Uniform instruction cap for the full unchanged input domain. -/
-theorem correct_uniform_bound (n : Nat) (hn : n ≤ 2^31-2) :
-    ∃ fuel, fuel < 2^69 ∧
-      (run fuel (initial n)).status = .exited 0 ∧
-      (run fuel (initial n)).output = toString (countPrimes n) ++ "\n" := by
-  obtain ⟨fuel, hb, h⟩ := correct_bounded n hn
-  exact ⟨fuel, Nat.lt_of_le_of_lt hb (instructionBound_rv32_cap n hn), h⟩
+/-- One fuel value works for every input below `10^11`. -/
+theorem correct_uniform_fuel :
+    ∃ fuel, ∀ n < 10^11,
+      is_exited_with_output (run fuel (initial n)) (toString (countPrimes n) ++ "\n") := by
+  refine ⟨11+114*10^11*10^11, fun n hn => ?_⟩
+  obtain ⟨fuel, hb, h⟩ := correct n hn
+  have := Nat.mul_le_mul (Nat.mul_le_mul_left 114 (Nat.le_of_lt hn)) (Nat.le_of_lt hn)
+  exact is_exited_with_output_mono (by omega) h
 
 end TinyFive.CountingPrimes

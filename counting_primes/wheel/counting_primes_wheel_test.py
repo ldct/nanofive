@@ -1,4 +1,4 @@
-"""Check the RV32I wheel, complete flags, immutable table, and Lean boundary.
+"""Check the RV64I wheel, complete flags, immutable table, and Lean boundary.
 
 Run: python counting_primes_wheel_test.py
 Requires the pinned Lean toolchain (`lake` on PATH).
@@ -43,6 +43,11 @@ def instruction_count(n, primes):
     )
 
 
+def budget(n):
+    """The budget in CountingPrimesWheel.correct."""
+    return 15 + 191 * n
+
+
 def plain_sieve_count(n, primes):
     return 13 + sum(9 + 5 * (n // p - 1) if primes[p] else 6
                     for p in range(2, n + 1))
@@ -83,6 +88,7 @@ def run_python(n):
         final += 1
     assert trace == expected + [final], f"wrong wheel candidate trace for N={n}"
     assert steps == instruction_count(n, primes), f"wrong path count for N={n}"
+    assert steps <= budget(n), f"budget exceeded for N={n}"
     return steps
 
 
@@ -94,7 +100,7 @@ def main():
     assert [int(w, 16) for w in words] == wheel.prog
     assert len(wheel.prog) == 35
     assert wheel.GAPS == (1, 2, 2, 4, 2, 4, 2, 4, 6, 2, 6)
-    assert wheel.BASE == 256 and wheel.MAX_N == (1 << 30) - 1
+    assert wheel.BASE == 256 and wheel.MAX_N == 10**11 - 1
     print("same machine code/data: PASS (128-byte code + 12-byte table)", flush=True)
 
     for n in [-1, wheel.MAX_N + 1]:
@@ -112,7 +118,7 @@ def main():
                     2000, 10_000, 100_000} |
                    {rng.randrange(241, 2000) for _ in range(20)})
     counts = {n: run_python(n) for n in cases}
-    print(f"count, all flags, wheel trace, table isolation, and steps: PASS "
+    print(f"count, all flags, wheel trace, table isolation, steps, and budget: PASS "
           f"({len(cases)} cases)", flush=True)
     for n in [100, 1000, 10_000, 100_000]:
         plain = plain_sieve_count(n, reference(n))

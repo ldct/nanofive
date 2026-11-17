@@ -1,4 +1,4 @@
-"""Count primes <= N using 23 RV32I instructions and constant memory.
+"""Count primes <= N using 23 RV64I instructions and constant memory.
 
 Deliberately slow trial division: test every d in [2, k), computing k % d
 by repeated subtraction. No sieve, multiplication, division, or stack.
@@ -8,9 +8,9 @@ See lean/CountingPrimes.lean for the correctness proof.
 
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))  # machine.py, elf.py
-from machine import machine, a0
+from machine import machine64, a0
 
-MAX_N = 2**31 - 2  # k reaches N+1; the count must print as signed RV32.
+MAX_N = 10**11 - 1  # The proved range; k reaches N+1, far below 2^63.
 
 prog = [
     0x00200293,  #  0: li   t0,2          # candidate k
@@ -42,7 +42,7 @@ prog = [
 def initial(n):
     if not 0 <= n <= MAX_N:
         raise ValueError(f"N must be in [0, {MAX_N}]")
-    m = machine(mem_size=128)
+    m = machine64(mem_size=128)
     m.write_i32_vec(prog, 0)
     m.x[a0] = n
     return m

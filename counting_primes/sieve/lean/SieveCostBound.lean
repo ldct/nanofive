@@ -1,12 +1,12 @@
 import SieveCost
 
 /-!
-# A dyadic instruction bound for the full RV32 sieve domain
+# Dyadic instruction bounds for the sieve
 
 We overcount prime marking by allowing every candidate to mark. On a block
 `[a, 2*a)`, every quotient `n/p` is at most `n/a`, so the block's marking
-contribution is at most `5*a*(n/a) ≤ 5*n`. There are only 29 such blocks
-between 2 and `2^30-1`. No prime-density estimate or evaluation at the
+contribution is at most `5*a*(n/a) ≤ 5*n`. There are 36 such blocks
+between 2 and `2^37 > 10^11`. No prime-density estimate or evaluation at the
 largest supported input is needed.
 -/
 namespace TinyFive.SieveCost
@@ -70,16 +70,25 @@ theorem instructionCount_dyadic_upper (n k : Nat) (hn : n < 2^(k+1)) :
   unfold instructionCount
   omega
 
-/-- A uniform numerical bound for every supported input, using 29 dyadic blocks. -/
-theorem instructionCount_rv32_dyadic_bound (n : Nat) (hn : n ≤ 2^30-1) :
-    instructionCount n ≤ 165356240746 := by
-  have h := instructionCount_dyadic_upper n 29 (by omega)
-  omega
+/-- A candidate costs at most `9 + 5*(n/p)`, whether or not it marks. -/
+theorem scanCost_le_quotientSum (n p len : Nat) :
+    scanCost n p len ≤ 9*len + 5*TrialDivisionCost.quotientSum n p len := by
+  induction len generalizing p with
+  | zero => simp
+  | succ len ih =>
+    have hc : candidateCost n p ≤ 9+5*(n/p) := by
+      unfold candidateCost
+      split <;> omega
+    have hi := ih (p+1)
+    simp only [scanCost_succ, TrialDivisionCost.quotientSum_succ]
+    omega
 
-/-- The dyadic uniform bound fits strictly below `2^38`. -/
-theorem instructionCount_rv32_dyadic_cap (n : Nat) (hn : n ≤ 2^30-1) :
-    instructionCount n < 2^38 := by
-  have h := instructionCount_rv32_dyadic_bound n hn
+/-- Thirty-six dyadic blocks cover every input below `10^11 < 2^37`. -/
+theorem instructionCount_le (n : Nat) (hn : n < 10^11) :
+    instructionCount n ≤ 13+189*n := by
+  have h1 := scanCost_le_quotientSum n 2 (n-1)
+  have h2 := TrialDivisionCost.quotientSum_le_dyadic n 36 (n-1) (by omega)
+  unfold instructionCount
   omega
 
 end TinyFive.SieveCost

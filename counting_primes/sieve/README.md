@@ -6,7 +6,7 @@ printf '100\n' | python counting_primes_sieve.py
 python counting_primes_sieve_test.py
 ```
 
-The Sieve of Eratosthenes is **25 RV32I instructions (100 bytes)**.
+The Sieve of Eratosthenes is **25 RV64I instructions (100 bytes)**.
 The host reads `N`, allocates `128 + N + 1` zeroed bytes, loads the code,
 and puts `N` in `a0`. All counting, flag loads, and composite marking
 are performed by the RISC-V code—not by Python.
@@ -21,18 +21,20 @@ For simplicity it starts marking at `2*p`, not `p*p`, and scans through
 `N` rather than stopping at its square root. It uses no multiplication,
 division, stack, or external library.
 
-Inputs satisfy `0 ≤ N ≤ 2^30 - 1`. This bound keeps all addresses,
-candidate increments, marking increments, and the signed decimal count
-in range. Memory use is linear in `N`; very large inputs require substantial
-host memory.
+Inputs satisfy `0 ≤ N < 10^11`. On the 64-bit machine this keeps all
+addresses, candidate increments, marking increments, and the signed decimal
+count far from wrapping. Memory use is linear in `N`: the proof covers inputs
+near `10^11`, which need about 100 GB, but the tests only run inputs that fit
+in ordinary host memory.
 
 ## Proof
 
 `lean/CountingPrimesSieve.lean` proves the **loaded machine code**
 correct on the existing `TinyFive.Machine` model. Its `correct` theorem
 establishes termination, exit code zero, and exact output
-`toString (CountingPrimes.countPrimes N) ++ "\n"` for every supported input.
-There is no assumed execution-fuel bound or termination premise.
+`toString (CountingPrimes.countPrimes N) ++ "\n"` within `13 + 189*N`
+instructions, for every supported input. There is no assumed execution-fuel
+bound or termination premise.
 
 The main invariant at candidate `p` is:
 
@@ -59,7 +61,7 @@ Supporting modules:
 * `SieveMemory.lean`: byte loads/stores, code-prefix preservation, and
   zero-initialized loader memory.
 * `SieveCost.lean`: instruction budgets, monotonicity, and numerical bounds.
-* `SieveCostBound.lean`: a tighter uniform bound using dyadic divisor blocks.
+* `SieveCostBound.lean`: the linear bound, using dyadic divisor blocks.
 
 ## Proved instruction bounds
 
@@ -91,46 +93,36 @@ have reached the exit. Thus the formula is the first-exit time, not merely
 an oversized fuel allowance.
 The cost lemmas also prove:
 
+* **Every valid input `0 ≤ N < 10^11` finishes in at most `13 + 189*N`
+  instructions** (`CountingPrimesSieve.correct`).
 * **Every `0 ≤ N ≤ 600` finishes in at most 9,529 instructions**, strictly
-  less than 10,000. The numerical budget at 600 is checked by Lean's kernel.
-* For every supported input, a simple (deliberately loose) upper bound is
-  `13 + max(N - 1, 0) * (9 + 5*N)`.
-* **Every valid input `0 ≤ N ≤ 2^30 - 1` finishes in at most
-  165,356,240,746 instructions**, strictly below `2^38`. This replaces
-  `2^63` as the preferred uniform bound without restricting the input range.
+  less than 10,000 (`correct_under_10000`). The numerical budget at 600 is
+  checked by Lean's kernel. `still_running_10000` shows 10,000 is not a
+  bound for every input.
+* `correct_uniform_fuel` gives one fuel value, `13 + 189*10^11`, that works
+  for every input.
 
-The corresponding machine theorems are `correct_under_10000`,
-`correct_bounded`, and `correct_bounded_rv32_dyadic` (or
-`correct_under_rv32_dyadic_cap` for the rounded `2^38` bound).
-The old `correct_under_rv32_cap` theorem remains available for compatibility.
-The original valid input range and RISC-V instructions are unchanged.
+### Why the linear bound is simple
 
-### Why the tighter uniform bound is still simple
-
-Partition candidates into 29 intervals `[a, 2*a)`, for
-`a = 2, 4, ..., 2^29`. Each interval has `a` candidates and every quotient
-`floor(N/p)` in it is at most `floor(N/a)`. Even overcounting by letting
-**every** candidate mark multiples, its total cost is at most
+Overcount by letting **every** candidate mark multiples: candidate `p`
+then costs at most `9 + 5*floor(N/p)`. Partition the candidates into 36
+intervals `[a, 2*a)`, for `a = 2, 4, ..., 2^36`; they cover every input
+below `10^11 < 2^37`. Each interval has `a` candidates, and every quotient
+`floor(N/p)` in it is at most `floor(N/a)`, so the interval's quotients sum
+to at most `a*floor(N/a) ≤ N`. Summing over the intervals gives
 
 ```
-a * (9 + 5*floor(N/a)) ≤ 9*a + 5*N.
-```
-
-Pad the scan to the end of these intervals; all added candidate costs
-are nonnegative. Summing the interval bounds gives
-
-```
-T(N) ≤ 13 + 9*(2^30 - 2) + 145*N
-     ≤ 165356240746                 for N ≤ 2^30 - 1.
+T(N) ≤ 13 + 9*(N - 1) + 5*36*N ≤ 13 + 189*N.
 ```
 
 This is a deterministic, conservative bound: no prime-density estimates,
 probability assumptions, or evaluation at the maximum input are needed.
-It uses only finite sums and elementary integer division. More generally,
-`instructionCount_dyadic_upper` proves
+It uses only finite sums and elementary integer division, and shares the
+dyadic lemma `TrialDivisionCost.quotientSum_le_dyadic` with the other two
+programs. `instructionCount_dyadic_upper` also proves
 `T(N) ≤ 13 + 9*(2^(k+1) - 2) + 5*k*N` whenever `N < 2^(k+1)`.
 
-These bounds count executed RV32 instructions, including each `ecall` as
+These bounds count executed RV64 instructions, including each `ecall` as
 one instruction. They do **not** bound CPU cycles, Python/Lean interpreter
 time, host-side input parsing or zero-initialized allocation, or the work
 performed inside a modeled system call.

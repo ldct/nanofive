@@ -6,7 +6,7 @@ printf '100\n' | python counting_primes_simple.py
 python counting_primes_simple_test.py
 ```
 
-The payload is **23 RV32I instructions (92 bytes)** in a 128-byte machine.
+The payload is **23 RV64I instructions (92 bytes)** in a 128-byte machine.
 It has no arrays, stack, memory writes, multiplication, or division.
 Unlike the fast `counting_primes_*.py` submissions, it is intentionally
 impractical for large inputs.
@@ -14,7 +14,7 @@ impractical for large inputs.
 For a byte-array Sieve of Eratosthenes with its own RISC-V machine proof,
 see `../sieve/`.
 
-The Python adapter reads an integer `N`, checks `0 ≤ N ≤ 2147483646`,
+The Python adapter reads an integer `N`, checks `0 ≤ N < 10^11`,
 loads it into `a0`, and starts the machine. The instructions themselves
 count primes **less than or equal to N**, print the decimal count and a
 newline, and exit. Input parsing is outside the proved machine program.
@@ -59,16 +59,15 @@ print(count)
 
 ## Proved instruction bounds
 
-For **every valid input `0 ≤ N ≤ 2^31 - 2`**, the loaded RISC-V program
+For **every valid input `0 ≤ N < 10^11`**, the loaded RISC-V program
 terminates with the correct output within
 
 ```
-11 + max(N - 1, 0) * (6 + 96*N)
+11 + 114*N*N
 ```
 
-instructions. Over the entire unchanged input range this is at most
-**442,721,856,751,121,990,201 instructions**, strictly below `2^69`.
-This is a conservative uniform bound, not an estimate of typical running time.
+instructions (`CountingPrimes.correct`). This is a conservative bound, not
+an estimate of typical running time.
 
 The machine proof first establishes the sharper input-dependent budget
 `TrialDivisionCost.instructionBound N`:
@@ -85,19 +84,18 @@ divisor-test branches costs at most `6 + 3*floor(k/d)`.
 We overcount by testing every possible divisor even when a composite
 candidate would exit early, and by replacing every candidate with `N`.
 
-To simplify the sum, partition the divisors into 30 intervals `[a, 2*a)`,
-for `a = 2, 4, ..., 2^30`. Each contains `a` terms bounded by
-`floor(N/a)`, so its quotient sum is at most
-`a*floor(N/a) ≤ N`. Thus all quotient terms sum to at most `30*N`;
-including the divisor-test overhead gives the `96*N` bound above.
+To simplify the sum, partition the divisors into 36 intervals `[a, 2*a)`,
+for `a = 2, 4, ..., 2^36`; they cover every input below `10^11 < 2^37`.
+Each contains `a` terms bounded by `floor(N/a)`, so its quotient sum is at
+most `a*floor(N/a) ≤ N`. Thus all quotient terms sum to at most `36*N`;
+including the divisor-test overhead gives `(N-1)*(114*N - 6) ≤ 114*N*N`.
 No prime-density estimates or maximum-input execution are needed.
 
 `../../lean/TinyFive/TrialDivisionCost.lean` (shared with the sieve) proves the arithmetic bounds.
-`CountingPrimes.correct_bounded`, `correct_quadratic_bound`, and
-`correct_uniform_bound` connect them to termination and output of the
-actual machine; `correct_numeric_bound` gives the literal uniform cap.
-`correct_dyadic_bound` also allows fewer divisor buckets for smaller inputs.
-The original `correct` theorem remains available.
+`CountingPrimes.correct_bounded` and `correct` connect them to termination
+and output of the actual machine. `correct_dyadic_bound` allows fewer
+divisor buckets for smaller inputs, and `correct_uniform_fuel` gives a
+single fuel value, `11 + 114*10^22`, that works for every input.
 Unlike the sieve's exact first-exit formula, these trial-division budgets
 are upper bounds: they intentionally overcount early exits.
 

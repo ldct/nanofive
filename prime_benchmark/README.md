@@ -68,8 +68,10 @@ Newton loop oscillates; that second defect is not repaired here.
   the three Library Checker ports parse decimal input on the RV32 machine.
 * Each `ecall` counts as one instruction; work inside the host system call
   does not. M-extension multiply/divide also count as one instruction,
-  not one CPU cycle. The compiled unproved ports may use RV32M, unlike
-  the three proved RV32I programs.
+  not one CPU cycle. The compiled unproved ports may use RV32M and run on
+  the RV32 machine. The three proved programs use only base instructions and
+  run on the RV64 machine they are proved for; the same instruction count
+  would result on RV32.
 * Host allocation, loading, input adaptation, and reference checking are
   excluded. Post-execution Python printing is excluded too.
 * This is a whole-program comparison, not an equal-I/O kernel benchmark.

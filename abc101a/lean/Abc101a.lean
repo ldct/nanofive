@@ -190,8 +190,6 @@ theorem tally_bounds (input : List Char) :
 
 abbrev initial_machine (input : List Char) := (load w prog 256 input)
 
-abbrev is_exited_with_output (machine : Machine w) (output : String) := machine.status = .exited 0 ∧ machine.output = output
-
 /-- From the head of the loop with `t0 = t`, the program prints `t` plus the tally of the
 remaining input, then exits. -/
 theorem loop_correct (hw : w = 32 ∨ w = 64) (inp : List Char) (x : Regs w) (out : String) :

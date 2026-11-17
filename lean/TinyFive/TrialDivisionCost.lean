@@ -4,6 +4,7 @@
 A divisor costs at most `6 + 3*(n/d)` instructions. The quotient sum is
 bounded by dyadic blocks, without any hypothesis about the density of primes.
 These budgets are connected to the loaded machine by `CountingPrimes.correct_bounded`.
+`quotientSum_le_dyadic` is shared with the sieve and wheel budgets.
 -/
 namespace TinyFive.TrialDivisionCost
 
@@ -113,25 +114,22 @@ theorem instructionBound_dyadic (n k : Nat) (hn : n < 2^(k+1)) :
     omega
   exact Nat.add_le_add_left (Nat.mul_le_mul_left (n-1) hs) _
 
-/-- Thirty dyadic blocks cover the entire supported RV32 domain. -/
-theorem instructionBound_rv32_quadratic (n : Nat) (hn : n ≤ 2^31-2) :
-    instructionBound n ≤ 11+(n-1)*(6+96*n) := by
-  have h := instructionBound_dyadic n 30 (by omega)
-  have hs : 6+6*(n-2)+3*30*n ≤ 6+96*n := by omega
-  exact Nat.le_trans h (Nat.add_le_add_left (Nat.mul_le_mul_left (n-1) hs) _)
+/-- Any prefix of the divisors `2, 3, ...` below `2^(k+1)` has quotient sum at most `k*n`.
+The sieve and wheel budgets use this too. -/
+theorem quotientSum_le_dyadic (n k len : Nat) (hlen : len ≤ 2^(k+1)-2) :
+    quotientSum n 2 len ≤ k*n :=
+  Nat.le_trans (quotientSum_mono_len n 2 len (2^(k+1)-2) hlen) (quotientSum_dyadic_upper n k)
 
-/-- A uniform numerical bound, obtained without running the largest input. -/
-theorem instructionBound_rv32_bound (n : Nat) (hn : n ≤ 2^31-2) :
-    instructionBound n ≤ 442721856751121990201 := by
-  have h := instructionBound_rv32_quadratic n hn
-  have hm := Nat.mul_le_mul (show n-1 ≤ 2^31-3 by omega)
-    (show 6+96*n ≤ 6+96*(2^31-2) by omega)
-  omega
-
-/-- The uniform bound fits strictly below `2^69`. -/
-theorem instructionBound_rv32_cap (n : Nat) (hn : n ≤ 2^31-2) :
-    instructionBound n < 2^69 := by
-  have h := instructionBound_rv32_bound n hn
+/-- Thirty-six dyadic blocks cover every input below `10^11 < 2^37`. -/
+theorem instructionBound_le (n : Nat) (hn : n < 10^11) :
+    instructionBound n ≤ 11+114*n*n := by
+  have h := instructionBound_dyadic n 36 (by omega)
+  have hs : (n-1)*(6+6*(n-2)+3*36*n) ≤ 114*n*n := by
+    rcases Nat.lt_or_ge n 2 with h2 | h2
+    · have : n = 0 ∨ n = 1 := by omega
+      rcases this with rfl | rfl <;> decide
+    · have := Nat.mul_le_mul (show n-1 ≤ n by omega) (show 6+6*(n-2)+3*36*n ≤ 114*n by omega)
+      rwa [Nat.mul_left_comm, ← Nat.mul_assoc] at this
   omega
 
 end TinyFive.TrialDivisionCost

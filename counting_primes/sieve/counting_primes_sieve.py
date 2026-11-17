@@ -1,4 +1,4 @@
-"""A 100-byte RV32I Sieve of Eratosthenes.
+"""A 100-byte RV64I Sieve of Eratosthenes.
 
 The host only reads N, allocates zeroed memory, and preloads a0. All prime
 counting and composite marking run as RISC-V instructions. Byte flags
@@ -8,10 +8,10 @@ See lean/CountingPrimesSieve.lean for the machine-code proof.
 
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))  # machine.py, elf.py
-from machine import machine, a0
+from machine import machine64, a0
 
 BASE = 128
-MAX_N = 2**30 - 1  # Marking can advance j as far as 2*N; no RV32 wrap.
+MAX_N = 10**11 - 1  # The proved range; marking advances j to at most 2*N.
 
 prog = [
     0x00200293,  #  0: li   t0,2          # candidate p
@@ -45,7 +45,7 @@ prog = [
 def initial(n):
     if not 0 <= n <= MAX_N:
         raise ValueError(f"N must be in [0, {MAX_N}]")
-    m = machine(mem_size=BASE + n + 1)
+    m = machine64(mem_size=BASE + n + 1)
     m.write_i32_vec(prog, 0)
     m.x[a0] = n
     return m

@@ -284,4 +284,20 @@ theorem run_add {w : Nat} (a b : Nat) (m : Machine w) : run (a + b) m = run b (r
     · exact ih _
     · cases b <;> simp [run, *]
 
+/-- Once a machine has stopped (exited or faulted), more fuel leaves it unchanged. -/
+theorem run_stopped {w : Nat} (fuel : Nat) (m : Machine w) (h : m.status ≠ .running) :
+    run fuel m = m := by
+  cases fuel <;> simp [run, h]
+
+/-- The machine has exited with code zero after printing exactly `output`. -/
+abbrev is_exited_with_output {w : Nat} (m : Machine w) (output : String) : Prop :=
+  m.status = .exited 0 ∧ m.output = output
+
+/-- Extra fuel does not change a run that has already exited with code zero. -/
+theorem is_exited_with_output_mono {w : Nat} {a b : Nat} {m : Machine w} {output : String}
+    (hab : a ≤ b) (h : is_exited_with_output (run a m) output) :
+    is_exited_with_output (run b m) output := by
+  rw [show b = a + (b-a) by omega, run_add, run_stopped _ _ (by rw [h.1]; decide)]
+  exact h
+
 end TinyFive

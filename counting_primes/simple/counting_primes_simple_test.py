@@ -35,8 +35,9 @@ def instruction_bound(n):
     return 11 + max(0, n - 1) * (6 + scan)
 
 
-def dyadic_instruction_bound(n):
-    return 11 + max(0, n - 1) * (6 + 96 * n)
+def budget(n):
+    """The budget in CountingPrimes.correct."""
+    return 11 + 114 * n * n
 
 
 def reference_instructions(n):
@@ -73,8 +74,7 @@ def run_python(n):
     assert m.halted and m.exit_code == 0
     assert bytes(m.mem) == code, "program must not write memory"
     assert steps == reference_instructions(n), f"instruction count mismatch for N={n}"
-    assert steps <= instruction_bound(n) <= dyadic_instruction_bound(n)
-    assert dyadic_instruction_bound(n) <= 442_721_856_751_121_990_201 < (1 << 69)
+    assert steps <= instruction_bound(n) <= budget(n), f"budget exceeded for N={n}"
     return output.getvalue()
 
 
@@ -102,12 +102,9 @@ def main():
                    {rng.randrange(101, 300) for _ in range(5)})
     for n in cases:
         assert run_python(n) == f"{sieve(n)}\n", f"N={n}"
-    print(f"machine vs sieve, instruction counts, and bounds: PASS ({len(cases)} cases)",
+    print(f"machine vs sieve, instruction counts, and budget: PASS ({len(cases)} cases)",
           flush=True)
     assert [reference_instructions(n) for n in range(4)] == [11, 11, 17, 32]
-    assert dyadic_instruction_bound(simple.MAX_N) == 442_721_856_751_121_990_201
-    print("full-domain instruction bound: PASS (442721856751121990201 < 2^69)",
-          flush=True)
 
     cli = subprocess.run([sys.executable, str(HERE / "counting_primes_simple.py")],
                          input="100\n", capture_output=True, text=True, check=True)

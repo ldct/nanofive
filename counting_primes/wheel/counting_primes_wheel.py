@@ -1,17 +1,17 @@
-"""RV32I mod-30 candidate-wheel byte sieve.
+"""RV64I mod-30 candidate-wheel byte sieve.
 
 The machine handles candidates 2, 3, 5, then 7, 11, 13, 17, 19, 23,
 29, 31, ... using an immutable cyclic gap table. All prime counting and
-marking execute on RV32I; the host only allocates memory and preloads N.
+marking execute on RV64I; the host only allocates memory and preloads N.
 Marking deliberately uses every multiple (j=2*p, j+=p), not a compressed
 wheel representation. See lean/CountingPrimesWheel.lean for the proof.
 """
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))  # machine.py, elf.py
-from machine import machine, a0
+from machine import machine64, a0
 
 BASE = 256
-MAX_N = 2**30 - 1
+MAX_N = 10**11 - 1  # The proved range.
 GAPS = (1, 2, 2, 4, 2, 4, 2, 4, 6, 2, 6)
 
 prog = [
@@ -56,7 +56,7 @@ prog = [
 def initial(n):
     if not 0 <= n <= MAX_N:
         raise ValueError(f"N must be in [0, {MAX_N}]")
-    m = machine(mem_size=BASE + n + 1)
+    m = machine64(mem_size=BASE + n + 1)
     m.write_i32_vec(prog, 0)
     m.x[a0] = n
     return m
