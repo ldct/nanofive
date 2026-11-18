@@ -92,3 +92,6 @@ inputs (including square, cube and fourth-power neighbors), checks known
 large values through `π(10¹¹)`, and spot-checks the local RV32 port. The
 large cases do not allocate a sieve of size `10¹¹`; the proof does not depend
 on any of the test outputs.
+
+See [the binary verification plan](BINARY_PROOF_PLAN.md) for the next step:
+refining the existing RV32IM image to this algorithm.
