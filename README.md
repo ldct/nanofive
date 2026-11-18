@@ -28,6 +28,7 @@ One folder per project, with its tests, and its proofs in
 | `newlib/` | C with newlib's printf and malloc, on RV32 and RV64 |
 | `ratpoints/` | Michael Stoll's ratpoints, compiled C with GMP |
 | `urlh/` | jwerle/url.h, compiled C, with a proof of its `decode_percent` |
+| `decnumber/` | jq's decNumber on RV64IM, with differential tests and a binary proof of `decContextClearStatus` |
 
 ## Running
 

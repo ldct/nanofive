@@ -1,5 +1,5 @@
 name = "tinyfive"
-defaultTargets = ["TinyFive", "Abc101a", "CountingPrimesSimple", "CountingPrimesSieve",
+defaultTargets = ["TinyFive", "DecNumber", "Abc101a", "CountingPrimesSimple", "CountingPrimesSieve",
   "CountingPrimesWheel", "CountingPrimesOddSieve", "CountingPrimesLucy", "CountingPrimesOddWheel", "GrumpyGordon", "Urlh", "abc101a",
   "counting_primes_simple", "counting_primes_sieve", "counting_primes_wheel",
   "counting_primes_odd_sieve", "counting_primes_lucy", "counting_primes_odd_wheel", "counting_primes_grumpygordon"]
@@ -58,6 +58,11 @@ roots = ["GrumpyGordon", "GrumpyResidual", "GrumpyTables", "GrumpyOdd"]
 name = "Urlh"
 srcDir = "urlh/lean"
 roots = ["UrlDecode"]
+
+[[lean_lib]]
+name = "DecNumber"
+srcDir = "decnumber/lean"
+roots = ["DecContextClear"]
 
 # Executable models, run by the projects' tests.
 [[lean_exe]]
