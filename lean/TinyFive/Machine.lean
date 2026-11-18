@@ -1,16 +1,11 @@
 /-!
 # A small RISC-V machine model
 
-A Lean counterpart of `machine.py`: the RV32I base instructions at register width `w`, with the
-RARS-style system calls that `machine.ECALL` implements. `w = 32` corresponds to `machine`; at
-`w = 64` the same instructions behave as `machine64` does. Beyond the base instructions the model
-has `mul` and `divu` from the M extension (at either width) and the RV64-only doubleword load and
-store `ld` and `sd`, which decode only at `w = 64`.
+A Lean counterpart of `machine.py`: RV32IM and RV64IM integer instructions as used by the
+emulator, and a subset of its RARS-style system calls.
 
 Differences from `machine.py`:
 
-* the rest of the M extension (`mulh*`, `div`, `rem*`) and the other RV64-only instructions
-  (`lwu` and the `*w` family) are absent;
 * system calls 4, 5 and 8 (print string, read integer, read line) are absent;
 * an address is an unsigned `w`-bit number and an access outside memory is a fault, whereas Python
   lets a negative index wrap to the end of `mem`;
@@ -22,7 +17,8 @@ namespace TinyFive
 abbrev Reg := Fin 32
 
 inductive AluOp where
-  | add | sub | sll | slt | sltu | xor | srl | sra | or | and | mul | divu
+  | add | sub | sll | slt | sltu | xor | srl | sra | or | and
+  | mul | mulh | mulhsu | mulhu | div | divu | rem | remu
   deriving DecidableEq, Repr
 
 inductive BranchOp where
@@ -43,12 +39,14 @@ inductive Instr where
   | store (width : Width) (rs2 rs1 : Reg) (imm : BitVec 12)
   | opImm (op : AluOp) (rd rs1 : Reg) (imm : BitVec 12)
   | op (op : AluOp) (rd rs1 rs2 : Reg)
+  | opImmWord (op : AluOp) (rd rs1 : Reg) (imm : BitVec 12)
+  | opWord (op : AluOp) (rd rs1 rs2 : Reg)
   | ecall
   deriving DecidableEq, Repr
 
 /-- Decode a 32-bit instruction word for a machine of register width `w`. The width matters for
-the shift-immediates, whose shift amount has 6 bits when `w = 64` and 5 bits otherwise, and for
-`ld` and `sd`, which exist only when `w = 64`. -/
+the XLEN-wide shift-immediates, whose shift amount has 6 bits when `w = 64` and 5 bits otherwise,
+and for RV64-only instructions. -/
 def decode (w : Nat) (i : BitVec 32) : Option Instr :=
   let opcode := i.extractLsb' 0 7
   let rd : Reg := (i.extractLsb' 7 5).toFin
@@ -85,6 +83,7 @@ def decode (w : Nat) (i : BitVec 32) : Option Instr :=
     | 3 => if w = 64 then some (.load .dword true rd rs1 immI) else none
     | 4 => some (.load .byte false rd rs1 immI)
     | 5 => some (.load .half false rd rs1 immI)
+    | 6 => if w = 64 then some (.load .word false rd rs1 immI) else none
     | _ => none
   | 0x23 =>
     match f3 with
@@ -107,10 +106,21 @@ def decode (w : Nat) (i : BitVec 32) : Option Instr :=
     | 6 => some (.opImm .or rd rs1 immI)
     | 7 => some (.opImm .and rd rs1 immI)
     | 1 => if kind = 0 then some (.opImm .sll rd rs1 shamt) else none
-    | _ =>
+    | 5 =>
       if kind = 0 then some (.opImm .srl rd rs1 shamt)
       else if kind = arith then some (.opImm .sra rd rs1 shamt)
       else none
+    | _ => none
+  | 0x1b =>
+    if w = 64 then
+      let shamt := (i.extractLsb' 20 5).setWidth 12
+      match f3, f7 with
+      | 0, _    => some (.opImmWord .add rd rs1 immI)
+      | 1, 0x00 => some (.opImmWord .sll rd rs1 shamt)
+      | 5, 0x00 => some (.opImmWord .srl rd rs1 shamt)
+      | 5, 0x20 => some (.opImmWord .sra rd rs1 shamt)
+      | _, _ => none
+    else none
   | 0x33 =>
     match f3, f7 with
     | 0, 0x00 => some (.op .add rd rs1 rs2)
@@ -124,8 +134,29 @@ def decode (w : Nat) (i : BitVec 32) : Option Instr :=
     | 6, 0x00 => some (.op .or rd rs1 rs2)
     | 7, 0x00 => some (.op .and rd rs1 rs2)
     | 0, 0x01 => some (.op .mul rd rs1 rs2)
+    | 1, 0x01 => some (.op .mulh rd rs1 rs2)
+    | 2, 0x01 => some (.op .mulhsu rd rs1 rs2)
+    | 3, 0x01 => some (.op .mulhu rd rs1 rs2)
+    | 4, 0x01 => some (.op .div rd rs1 rs2)
     | 5, 0x01 => some (.op .divu rd rs1 rs2)
+    | 6, 0x01 => some (.op .rem rd rs1 rs2)
+    | 7, 0x01 => some (.op .remu rd rs1 rs2)
     | _, _ => none
+  | 0x3b =>
+    if w = 64 then
+      match f3, f7 with
+      | 0, 0x00 => some (.opWord .add rd rs1 rs2)
+      | 0, 0x20 => some (.opWord .sub rd rs1 rs2)
+      | 1, 0x00 => some (.opWord .sll rd rs1 rs2)
+      | 5, 0x00 => some (.opWord .srl rd rs1 rs2)
+      | 5, 0x20 => some (.opWord .sra rd rs1 rs2)
+      | 0, 0x01 => some (.opWord .mul rd rs1 rs2)
+      | 4, 0x01 => some (.opWord .div rd rs1 rs2)
+      | 5, 0x01 => some (.opWord .divu rd rs1 rs2)
+      | 6, 0x01 => some (.opWord .rem rd rs1 rs2)
+      | 7, 0x01 => some (.opWord .remu rd rs1 rs2)
+      | _, _ => none
+    else none
   | _ => if i = 0x00000073 then some .ecall else none
 
 /-- The register file. Register 0 reads as zero whatever is stored in it. -/
@@ -177,8 +208,9 @@ def fail (m : Machine w) : Machine w := { m with status := .fault }
 
 end Machine
 
-/-- `mul` keeps the low `w` bits of the product. `divu` is unsigned division, and division by
-zero gives all ones, as the RISC-V specification and `machine.div` have it. -/
+/-- `mul` keeps the low `w` bits of the product; `mulh*` read the high half of a widened
+product. Division truncates toward zero; a zero divisor gives all ones for the quotient
+and the dividend for the remainder. Signed overflow wraps at the operation width. -/
 def alu {w : Nat} (op : AluOp) (a b : BitVec w) : BitVec w :=
   match op with
   | .add => a + b
@@ -192,7 +224,13 @@ def alu {w : Nat} (op : AluOp) (a b : BitVec w) : BitVec w :=
   | .or => a ||| b
   | .and => a &&& b
   | .mul => a * b
+  | .mulh => (a.signExtend (w + w) * b.signExtend (w + w)).extractLsb' w w
+  | .mulhsu => (a.signExtend (w + w) * b.setWidth (w + w)).extractLsb' w w
+  | .mulhu => (a.setWidth (w + w) * b.setWidth (w + w)).extractLsb' w w
+  | .div => if b = 0 then BitVec.allOnes w else a.sdiv b
   | .divu => if b = 0 then BitVec.allOnes w else a / b
+  | .rem => a.srem b
+  | .remu => a % b
 
 def BranchOp.taken {w : Nat} (op : BranchOp) (a b : BitVec w) : Bool :=
   match op with
@@ -262,6 +300,10 @@ def exec {w : Nat} (i : Instr) (m : Machine w) : Machine w :=
     | none => m.fail
   | .opImm op rd rs1 imm => (m.setReg rd (alu op (m.x.get rs1) (imm.signExtend w))).advance
   | .op op rd rs1 rs2 => (m.setReg rd (alu op (m.x.get rs1) (m.x.get rs2))).advance
+  | .opImmWord op rd rs1 imm =>
+    (m.setReg rd ((alu op ((m.x.get rs1).setWidth 32) (imm.signExtend 32)).signExtend w)).advance
+  | .opWord op rd rs1 rs2 =>
+    (m.setReg rd ((alu op ((m.x.get rs1).setWidth 32) ((m.x.get rs2).setWidth 32)).signExtend w)).advance
   | .ecall => ecall m
 
 /-- Execute the instruction at `pc`. -/

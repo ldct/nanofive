@@ -104,3 +104,8 @@ root = "OddWheelMain"
 name = "counting_primes_grumpygordon"
 srcDir = "counting_primes/grumpygordon/lean"
 root = "GrumpyMain"
+
+[[lean_exe]]
+name = "decnumber_decode"
+srcDir = "decnumber/lean"
+root = "DecodeELF"

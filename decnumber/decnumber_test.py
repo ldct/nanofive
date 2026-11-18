@@ -1,4 +1,4 @@
-"""Cross-build jq's decNumber and differential-test it on NanoFive RV64IM."""
+"""Cross-build jq's decNumber, differential-test it, and check the Lean links."""
 import argparse
 import contextlib
 from collections import Counter
@@ -114,20 +114,15 @@ def text_symbols(*paths):
       yield int(addr, 16), int(size, 16), name
 
 
-def unsupported_word(word):
-  """Classify RV64IM encodings missing from lean/TinyFive/Machine.lean."""
-  opcode, f3, f7 = word & 0x7f, (word >> 12) & 7, word >> 25
-  if opcode == 0x03 and f3 == 6:
-    return 'lwu'
-  if opcode == 0x1b:
-    return {0: 'addiw', 1: 'slliw', 5: 'sraiw' if f7 else 'srliw'}[f3]
-  if opcode == 0x3b:
-    if f7 == 1:
-      return {0: 'mulw', 4: 'divw', 5: 'divuw', 6: 'remw', 7: 'remuw'}[f3]
-    return {0: 'subw' if f7 else 'addw', 1: 'sllw', 5: 'sraw' if f7 else 'srlw'}[f3]
-  if opcode == 0x33 and f7 == 1:
-    return {1: 'mulh', 2: 'mulhsu', 3: 'mulhu', 4: 'div', 6: 'rem', 7: 'remu'}.get(f3)
-  return None
+def check_lean_decode(words):
+  """Use TinyFive.decode itself, not a duplicate Python instruction classifier."""
+  result = subprocess.run(['lake', 'exe', 'decnumber_decode'], cwd=ROOT,
+                          input=''.join(f'{word}\n' for word in sorted(set(words))),
+                          stdout=subprocess.PIPE, text=True, check=True)
+  missing = {int(line) for line in result.stdout.splitlines()}
+  if missing:
+    raise AssertionError('Lean cannot decode exercised library words: '
+                         + ', '.join(f'{word:08x}' for word in sorted(missing)))
 
 
 def run(elf, dec_objects):
@@ -155,8 +150,8 @@ def run(elf, dec_objects):
   if m.exit_code != 0:
     raise RuntimeError(f'emulated harness exited {m.exit_code}')
   library_pcs = pcs & symbols.keys()
-  gaps = Counter(op for pc in library_pcs if (op := unsupported_word(m.read_i32(pc) & 0xffffffff)))
-  return out.getvalue().splitlines(), steps, len(library_pcs), len({symbols[pc] for pc in library_pcs}), gaps
+  check_lean_decode(m.read_i32(pc) & 0xffffffff for pc in library_pcs)
+  return out.getvalue().splitlines(), steps, len(library_pcs), len({symbols[pc] for pc in library_pcs})
 
 
 def main():
@@ -175,7 +170,7 @@ def main():
     elf, dec_objects = build(jq, tmp, cases)
     if args.elf:
       args.elf.write_bytes(elf.read_bytes())
-    lines, steps, sites, functions, gaps = run(elf, dec_objects)
+    lines, steps, sites, functions = run(elf, dec_objects)
   if len(lines) != len(cases):
     raise RuntimeError(f'expected {len(cases)} output records, got {len(lines)}')
   for case, line in zip(cases, lines):
@@ -187,8 +182,7 @@ def main():
   counts = Counter(op for op, _, _ in cases)
   print(f'PASS: {len(cases)} cases ({counts["p"]} parse/format, {counts["c"]} compare, {counts["a"]} add)')
   print(f'{steps:,} instructions, including {sites:,} distinct decNumber/decContext PCs in {functions} symbols')
-  print(f'{sum(gaps.values()):,} of those sites use instructions absent in Lean: '
-        + ', '.join(f'{op}={n}' for op, n in sorted(gaps.items())))
+  print('Lean decoded all exercised library sites')
   print('decContextClearStatus: ELF words match the Lean proof')
 
 
