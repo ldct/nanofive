@@ -1,6 +1,7 @@
-"""Check the mod-6 wheel sieve against a reference sieve and report step counts.
+"""Check the mod-6 wheel sieve against a reference sieve and the Lean machine model.
 
 Run: python3 counting_primes/odd_wheel/counting_primes_odd_wheel_test.py
+Requires the pinned Lean toolchain (`lake` on PATH).
 """
 
 import contextlib
@@ -8,12 +9,14 @@ import io
 from math import isqrt
 from pathlib import Path
 import random
+import re
 import subprocess
 import sys
 
 import counting_primes_odd_wheel as wheel
 
 HERE = Path(__file__).resolve().parent
+ROOT = HERE.parent.parent
 BENCH = [100, 1000, 10_000, 100_000, 1_000_000]
 
 
@@ -65,6 +68,7 @@ def run(n):
     assert m.halted and m.exit_code == 0, f"bad exit for N={n}"
     assert output.getvalue() == f"{sum(primes)}\n", f"wrong count for N={n}"
     assert bytes(m.mem[:wheel.BASE]) == image, f"store below the flags for N={n}"
+    assert steps <= 33 + 326*n + (15 + 10*(n+1))*(n+2), f"budget exceeded for N={n}"
 
     flags = m.mem[wheel.BASE:]
     assert set(flags) <= {0, 1}
@@ -82,6 +86,13 @@ def run(n):
 
 
 def main():
+    source = (HERE / "lean" / "CountingPrimesOddWheelMachine.lean").read_text()
+    body = re.search(r"def prog : List \(BitVec 32\) := \[(.*?)\]", source, re.S)
+    assert body, "Lean instruction list not found"
+    assert [int(w, 16) for w in re.findall(r"0x[0-9a-fA-F]+", body.group(1))] == wheel.prog
+    assert wheel.BASE == 512 and wheel.MAX_N == 10**11 - 1
+    print("same machine code as the Lean proof: PASS", flush=True)
+
     check_instruction_set()
     assert 4 * len(wheel.prog) <= wheel.BASE - 16, "the count pass reads up to 15 bytes below BASE"
     print(f"program: {len(wheel.prog)} instructions, {4 * len(wheel.prog)} bytes, no table; "
@@ -115,6 +126,19 @@ def main():
                          input="100\n", capture_output=True, text=True, check=True)
     assert cli.stdout == "25\n" and not cli.stderr
     print("command line: PASS", flush=True)
+
+    subprocess.run(["lake", "build"], cwd=ROOT, check=True)
+    exe = ROOT / ".lake" / "build" / "bin" / "counting_primes_odd_wheel"
+    # Exercise both sides of square, word-round and 496-flag block boundaries.
+    for n in [0, 1, 2, 3, 4, 5, 24, 25, 46, 47, 48, 49, 52, 53, 120, 121,
+              168, 169, 1000, 1486, 1488, 1489, 10_000]:
+        result = subprocess.run([str(exe)], input=f"{n}\n", capture_output=True,
+                                text=True, check=True)
+        assert result.stdout == f"{sum(reference(n))}\n" and not result.stderr, n
+    for text in ["-1\n", "not a number\n", f"{wheel.MAX_N + 1}\n"]:
+        result = subprocess.run([str(exe)], input=text, capture_output=True, text=True)
+        assert result.returncode != 0 and result.stderr and not result.stdout
+    print("Lean proof build and executable machine model: PASS", flush=True)
 
     print(f"{'N':>9}  {'pi(N)':>6}  {'instructions':>12}  {'per N':>6}")
     for n in BENCH:

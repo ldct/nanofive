@@ -23,7 +23,7 @@ One folder per project, with its tests, and its proofs in
 | Project | What it is |
 |---|---|
 | `abc101a/` | AtCoder ABC101 A in RV32I machine code (assembled in Python), proved correct |
-| `counting_primes/` | five proved prime counters (trial division, byte sieve, mod-30 wheel sieve, odds-only sieve, Lucy_Hedgehog in O(√N) memory) in `simple/`, `sieve/`, `wheel/`, `odd_sieve/`, `lucy/`, and an unproved mod-6 wheel sieve in `odd_wheel/` |
+| `counting_primes/` | six proved prime counters: `simple/`, `sieve/`, `wheel/` (mod 30), `odd_sieve/`, `lucy/` (O(√N) memory), and `odd_wheel/` (mod 6) |
 | `prime_benchmark/` | instruction counts of `simple/`, `sieve/`, `wheel/` and six third-party prime programs |
 | `newlib/` | C with newlib's printf and malloc, on RV32 and RV64 |
 | `ratpoints/` | Michael Stoll's ratpoints, compiled C with GMP |

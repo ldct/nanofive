@@ -1,8 +1,8 @@
 name = "tinyfive"
 defaultTargets = ["TinyFive", "Abc101a", "CountingPrimesSimple", "CountingPrimesSieve",
-  "CountingPrimesWheel", "CountingPrimesOddSieve", "CountingPrimesLucy", "Urlh", "abc101a",
+  "CountingPrimesWheel", "CountingPrimesOddSieve", "CountingPrimesLucy", "CountingPrimesOddWheel", "Urlh", "abc101a",
   "counting_primes_simple", "counting_primes_sieve", "counting_primes_wheel",
-  "counting_primes_odd_sieve", "counting_primes_lucy"]
+  "counting_primes_odd_sieve", "counting_primes_lucy", "counting_primes_odd_wheel"]
 
 # Shared: the machine model and lemmas more than one project uses.
 [[lean_lib]]
@@ -41,6 +41,15 @@ srcDir = "counting_primes/lucy/lean"
 roots = ["CountingPrimesLucy", "LucyMath", "LucyMemory"]
 
 [[lean_lib]]
+name = "CountingPrimesOddWheel"
+srcDir = "counting_primes/odd_wheel/lean"
+roots = ["CountingPrimesOddWheel", "CountingPrimesOddWheelMachine", "OddWheelSetup",
+  "OddWheelMath", "OddWheelCount", "OddWheelDivision", "OddWheelMarking", "OddWheelFive",
+  "OddWheelLoops", "OddWheelBounds", "OddWheelFlags", "OddWheelCountAll",
+  "OddWheelOuter", "OddWheelOuterInv", "OddWheelOuterLoop", "OddWheelSquares", "OddWheelMinus",
+  "OddWheelPlus", "OddWheelPairBounds", "OddWheelFiveMem", "OddWheelFiveLoop", "OddWheelStartupMarks"]
+
+[[lean_lib]]
 name = "Urlh"
 srcDir = "urlh/lean"
 roots = ["UrlDecode"]
@@ -75,3 +84,8 @@ root = "OddSieveMain"
 name = "counting_primes_lucy"
 srcDir = "counting_primes/lucy/lean"
 root = "LucyMain"
+
+[[lean_exe]]
+name = "counting_primes_odd_wheel"
+srcDir = "counting_primes/odd_wheel/lean"
+root = "OddWheelMain"
