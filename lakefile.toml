@@ -1,8 +1,8 @@
 name = "tinyfive"
 defaultTargets = ["TinyFive", "Abc101a", "CountingPrimesSimple", "CountingPrimesSieve",
-  "CountingPrimesWheel", "CountingPrimesOddSieve", "CountingPrimesLucy", "CountingPrimesOddWheel", "Urlh", "abc101a",
+  "CountingPrimesWheel", "CountingPrimesOddSieve", "CountingPrimesLucy", "CountingPrimesOddWheel", "GrumpyGordon", "Urlh", "abc101a",
   "counting_primes_simple", "counting_primes_sieve", "counting_primes_wheel",
-  "counting_primes_odd_sieve", "counting_primes_lucy", "counting_primes_odd_wheel"]
+  "counting_primes_odd_sieve", "counting_primes_lucy", "counting_primes_odd_wheel", "counting_primes_grumpygordon"]
 
 # Shared: the machine model and lemmas more than one project uses.
 [[lean_lib]]
@@ -50,6 +50,11 @@ roots = ["CountingPrimesOddWheel", "CountingPrimesOddWheelMachine", "OddWheelSet
   "OddWheelPlus", "OddWheelPairBounds", "OddWheelFiveMem", "OddWheelFiveLoop", "OddWheelStartupMarks"]
 
 [[lean_lib]]
+name = "GrumpyGordon"
+srcDir = "counting_primes/grumpygordon/lean"
+roots = ["GrumpyGordon", "GrumpyResidual", "GrumpyTables", "GrumpyOdd"]
+
+[[lean_lib]]
 name = "Urlh"
 srcDir = "urlh/lean"
 roots = ["UrlDecode"]
@@ -89,3 +94,8 @@ root = "LucyMain"
 name = "counting_primes_odd_wheel"
 srcDir = "counting_primes/odd_wheel/lean"
 root = "OddWheelMain"
+
+[[lean_exe]]
+name = "counting_primes_grumpygordon"
+srcDir = "counting_primes/grumpygordon/lean"
+root = "GrumpyMain"

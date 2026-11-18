@@ -26,6 +26,10 @@ checked against an ordinary sieve.
 | `counting_primes_simple.py` | **yes** | 2,799,716 |
 | `plummer_sieve.py` (input-adapted, **original logic**) | no | **fails** |
 
+There is a separate [algorithm-level Lean proof](../counting_primes/grumpygordon/README.md)
+of the grumpygordon rough-number algorithm. It does **not** verify the benchmarked
+RV32 image, so its proof-status entry above is still “no”.
+
 The original Plummer logic fails after **251,172 successful instructions**,
 attempting an out-of-bounds load at PC 776. This is not a completed
 prime-count execution and must not be ranked as one.

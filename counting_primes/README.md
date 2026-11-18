@@ -67,3 +67,11 @@ defined in `Machine`.
 `../prime_benchmark/` measures the first three against six third-party prime
 programs on a common input; the instruction counts above come from there,
 except those of `odd_sieve/`, `lucy/`, and `odd_wheel/`, which their own tests measure.
+
+## Separate algorithm-level proof
+
+[`grumpygordon/`](grumpygordon/README.md) verifies an executable Lean model
+of the #50137 rough-number counter used in `prime_benchmark/`. Its theorem
+covers all natural numbers, including `10^11`. It proves the compact-table
+sieve through the fourth root and the remaining semiprime/triple correction;
+it is **not** a seventh loaded-machine proof.
