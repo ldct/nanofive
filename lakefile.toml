@@ -62,7 +62,7 @@ roots = ["UrlDecode"]
 [[lean_lib]]
 name = "DecNumber"
 srcDir = "decnumber/lean"
-roots = ["DecContextClear"]
+roots = ["DecContextClear", "DecNumber.Replay", "DecNumber.Image", "DecNumber.Bounded"]
 
 # Executable models, run by the projects' tests.
 [[lean_exe]]

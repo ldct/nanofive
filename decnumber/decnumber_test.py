@@ -125,6 +125,28 @@ def check_lean_decode(words):
                          + ', '.join(f'{word:08x}' for word in sorted(missing)))
 
 
+def check_lean_image(m, linked):
+  """Check proof entry points and sparse code/rodata at their linked addresses."""
+  records = subprocess.check_output(['lake', 'exe', 'decnumber_decode', '--image'],
+                                    cwd=ROOT, text=True)
+  symbols = {name: addr for addr, _, name in linked}
+  for line in records.splitlines():
+    kind, key, *values = line.split()
+    if kind == 'symbol':
+      if symbols.get(key) != int(values[0]):
+        raise AssertionError(f'{key}: linked address differs from the Lean proof')
+    elif kind == 'bytes':
+      addr = int(key)
+      data = bytes(map(int, values))
+      actual = m.mem[addr:addr + len(data)]
+      if actual != data:
+        offsets = (i for i, (a, b) in enumerate(zip(actual, data)) if a != b)
+        mismatch = addr + next(offsets, len(actual))
+        raise AssertionError(f'linked ELF differs from the Lean proof at {mismatch:#x}')
+    else:
+      raise AssertionError(f'unexpected Lean proof image record: {line}')
+
+
 def run(elf, dec_objects):
   m = machine64(mem_size=MEM_SIZE)
   m.pc = load_elf(m, elf)
@@ -135,6 +157,7 @@ def run(elf, dec_objects):
   if words != CLEAR_WORDS:
     raise AssertionError(f'decContextClearStatus differs from the Lean proof: '
                          f'{", ".join(hex(word) for word in words)}')
+  check_lean_image(m, linked)
   symbols = {pc: name for addr, size, name in linked if name in names
              for pc in range(addr, addr + size, 4)}
   out = io.StringIO()
@@ -184,6 +207,7 @@ def main():
   print(f'{steps:,} instructions, including {sites:,} distinct decNumber/decContext PCs in {functions} symbols')
   print('Lean decoded all exercised library sites')
   print('decContextClearStatus: ELF words match the Lean proof')
+  print('decNumberFromString/decNumberCompare: ELF entry points and proof image match')
 
 
 if __name__ == '__main__':
