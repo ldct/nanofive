@@ -1,6 +1,6 @@
 """Regression tests and the Python/Lean instruction-word boundary.
 
-Run: python counting_primes_simple_test.py
+Run: python counting_primes_trial_division_test.py
 Requires the pinned Lean toolchain (`lake` on PATH).
 """
 
@@ -12,7 +12,7 @@ import re
 import subprocess
 import sys
 
-import counting_primes_simple as simple
+import counting_primes_trial_division as trial_division
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
@@ -36,7 +36,7 @@ def instruction_bound(n):
 
 
 def budget(n):
-    """The budget in CountingPrimes.correct."""
+    """The budget in CountingPrimesTrialDivision.correct."""
     return 11 + 114 * n * n
 
 
@@ -57,7 +57,7 @@ def reference_instructions(n):
 
 
 def run_python(n):
-    m = simple.initial(n)
+    m = trial_division.initial(n)
     code = bytes(m.mem)
     steps = 0
     step = m.step
@@ -79,22 +79,22 @@ def run_python(n):
 
 
 def main():
-    source = (LEAN / "CountingPrimes.lean").read_text()
+    source = (LEAN / "CountingPrimesTrialDivision.lean").read_text()
     body = re.search(r"def prog : List \(BitVec 32\) := \[(.*?)\]", source, re.S)
     assert body, "Lean instruction list not found"
     words = re.findall(r"0x[0-9a-fA-F]+", body.group(1))
-    assert [int(w, 16) for w in words] == simple.prog
-    assert len(simple.prog) == 23
+    assert [int(w, 16) for w in words] == trial_division.prog
+    assert len(trial_division.prog) == 23
     print("same machine code: PASS (23 words / 92 bytes)")
 
-    for n in [-1, simple.MAX_N + 1]:
+    for n in [-1, trial_division.MAX_N + 1]:
         try:
-            simple.initial(n)
+            trial_division.initial(n)
         except ValueError:
             pass
         else:
             raise AssertionError(f"accepted out-of-range input {n}")
-    assert simple.initial(simple.MAX_N).x[10] == simple.MAX_N
+    assert trial_division.initial(trial_division.MAX_N).x[10] == trial_division.MAX_N
     print("input boundaries: PASS")
 
     rng = random.Random(0)
@@ -106,11 +106,11 @@ def main():
           flush=True)
     assert [reference_instructions(n) for n in range(4)] == [11, 11, 17, 32]
 
-    cli = subprocess.run([sys.executable, str(HERE / "counting_primes_simple.py")],
+    cli = subprocess.run([sys.executable, str(HERE / "counting_primes_trial_division.py")],
                          input="100\n", capture_output=True, text=True, check=True)
     assert cli.stdout == "25\n" and not cli.stderr
     subprocess.run(["lake", "build"], cwd=ROOT, check=True)
-    exe = ROOT / ".lake" / "build" / "bin" / "counting_primes_simple"
+    exe = ROOT / ".lake" / "build" / "bin" / "counting_primes_trial_division"
     for n in [0, 1, 2, 3, 4, 9, 25, 49, 97, 121, 200, 1000]:
         result = subprocess.run([str(exe)], input=f"{n}\n", capture_output=True,
                                 text=True, check=True)

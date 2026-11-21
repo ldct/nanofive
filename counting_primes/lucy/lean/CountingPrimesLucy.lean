@@ -1,5 +1,6 @@
 import TinyFive.Machine
 import TinyFive.Primes
+import CountingPrimesSpec
 import TinyFive.SieveMemory
 import LucyMath
 import LucyMemory
@@ -1609,5 +1610,17 @@ theorem correct_uniform_fuel :
   refine ⟨26 + 41 * 10^11, fun n hn => ?_⟩
   obtain ⟨fuel, hb, h⟩ := correct n hn
   exact is_exited_with_output_mono (by omega) h
+
+/-- **Correctness with program size.** With table memory for every input below `10^11`, the loaded
+program satisfies `IsCorrect`, and its memory holds only 344 nonzero bytes. Zero padding is
+free, so the size bound rules out lookup tables. -/
+theorem correct_with_size : ∃ m, IsCorrect m ∧ programSize m = 344 := by
+  refine ⟨load 64 prog (512 + 8*316228) [], ?_, ?_⟩
+  · exact isCorrect_of_load prog (fun n => 512 + 8 * (isqrt n + 1)) (512 + 8*316228)
+      (fun _ _ => by have : 4 * prog.length ≤ 512 := (by decide); omega)
+      (fun n hn => by have := r_lt_of_sq (isqrt_spec n).1 hn; omega)
+      correct_uniform_fuel
+  · rw [programSize_load prog 512 (512 + 8*316228) (by decide) (by omega)]
+    decide +kernel
 
 end TinyFive.CountingPrimesLucy

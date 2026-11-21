@@ -23,7 +23,7 @@ checked against an ordinary sieve.
 | `counting_primes_sieve.py` | **yes** | 16,301 |
 | `plummer_sieve.py` (**bounds-repaired**, input-adapted) | no | 28,467 |
 | `counting_primes_lpha.py` | no | 953,730 |
-| `counting_primes_simple.py` | **yes** | 2,799,716 |
+| `counting_primes_trial_division.py` | **yes** | 2,799,716 |
 | `plummer_sieve.py` (input-adapted, **original logic**) | no | **fails** |
 
 There is a separate [algorithm-level Lean proof](../counting_primes/grumpygordon/README.md)

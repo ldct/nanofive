@@ -135,7 +135,7 @@
       "output": "168\n"
     },
     {
-      "program": "counting_primes_simple.py",
+      "program": "counting_primes_trial_division.py",
       "variant": "original",
       "proved": true,
       "notes": [

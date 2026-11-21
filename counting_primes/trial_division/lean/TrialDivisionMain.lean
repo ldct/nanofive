@@ -1,11 +1,11 @@
-import CountingPrimes
+import CountingPrimesTrialDivision
 
 open TinyFive
 
 private partial def runToEnd (m : Machine 64) : Machine 64 :=
   if m.status = .running then runToEnd (step m) else m
 
-/-- Host-side input adapter, like `counting_primes_simple.py`. -/
+/-- Host-side input adapter, like `counting_primes_trial_division.py`. -/
 def main : IO UInt32 := do
   let line ← (← IO.getStdin).getLine
   let some n := line.trimAscii.toString.toNat?
@@ -13,7 +13,7 @@ def main : IO UInt32 := do
   if n ≥ 10^11 then
     IO.eprintln "N must be below 10^11"
     return 1
-  let m := runToEnd ((load 64 CountingPrimes.prog 128 []).setReg 10 (BitVec.ofNat 64 n))
+  let m := runToEnd ((load 64 CountingPrimesTrialDivision.prog 128 []).setReg 10 (BitVec.ofNat 64 n))
   IO.print m.output
   match m.status with
   | .exited code => pure code.toNat.toUInt32

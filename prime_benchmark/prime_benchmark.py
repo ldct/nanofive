@@ -26,7 +26,7 @@ from prime_benchmark_fixed import prepare
 
 HERE = Path(__file__).resolve().parent
 PROVEN = (
-    "counting_primes_simple.py",
+    "counting_primes_trial_division.py",
     "counting_primes_sieve.py",
     "counting_primes_wheel.py",
 )

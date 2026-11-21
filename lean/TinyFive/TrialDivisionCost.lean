@@ -3,7 +3,7 @@
 
 A divisor costs at most `6 + 3*(n/d)` instructions. The quotient sum is
 bounded by dyadic blocks, without any hypothesis about the density of primes.
-These budgets are connected to the loaded machine by `CountingPrimes.correct_bounded`.
+These budgets are connected to the loaded machine by `CountingPrimesTrialDivision.correct_bounded`.
 `quotientSum_le_dyadic` is shared with the sieve and wheel budgets.
 -/
 namespace TinyFive.TrialDivisionCost

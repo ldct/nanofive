@@ -1,9 +1,9 @@
 # Tiny prime counter
 
 ```
-printf '100\n' | python counting_primes_simple.py
+printf '100\n' | python counting_primes_trial_division.py
 # 25
-python counting_primes_simple_test.py
+python counting_primes_trial_division_test.py
 ```
 
 The payload is **23 RV64I instructions (92 bytes)** in a 128-byte machine.
@@ -66,7 +66,7 @@ terminates with the correct output within
 11 + 114*N*N
 ```
 
-instructions (`CountingPrimes.correct`). This is a conservative bound, not
+instructions (`CountingPrimesTrialDivision.correct`). This is a conservative bound, not
 an estimate of typical running time.
 
 The machine proof first establishes the sharper input-dependent budget
@@ -92,7 +92,7 @@ including the divisor-test overhead gives `(N-1)*(114*N - 6) ≤ 114*N*N`.
 No prime-density estimates or maximum-input execution are needed.
 
 `../../lean/TinyFive/TrialDivisionCost.lean` (shared with the sieve) proves the arithmetic bounds.
-`CountingPrimes.correct_bounded` and `correct` connect them to termination
+`CountingPrimesTrialDivision.correct_bounded` and `correct` connect them to termination
 and output of the actual machine. `correct_dyadic_bound` allows fewer
 divisor buckets for smaller inputs, and `correct_uniform_fuel` gives a
 single fuel value, `11 + 114*10^22`, that works for every input.
@@ -106,9 +106,9 @@ steps, check a quotient-based reference count, and verify the bounds.
 
 ## Formal verification boundary
 
-`lean/CountingPrimes.lean` contains the Lean proof against
+`lean/CountingPrimesTrialDivision.lean` contains the Lean proof against
 `TinyFive.Machine`, the same small model used for `../../abc101a/abc101_a.py`.
-`CountingPrimes.correct` states that every supported input reaches a state
+`CountingPrimesTrialDivision.correct` states that every supported input reaches a state
 with exit code zero and output `toString (countPrimes N) ++ "\n"`.
 `prime_iff_no_proper_divisor` connects its primality predicate to ordinary
 natural-number divisibility.
@@ -116,7 +116,7 @@ The model includes instruction fetch/decode, wrapping registers, branches,
 and printing/exit system calls. It is not a verified implementation of
 `machine.py`, nor a proved refinement of the official RISC-V semantics.
 
-`counting_primes_simple_test.py` checks that Python and Lean contain the
+`counting_primes_trial_division_test.py` checks that Python and Lean contain the
 same instruction words, builds the proof with the pinned Lean toolchain,
 compares the Python machine against an independent sieve, and checks the
 executable Lean machine model. Tests support the Python/model connection;

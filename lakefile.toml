@@ -1,8 +1,10 @@
 name = "tinyfive"
-defaultTargets = ["TinyFive", "DecNumber", "Abc101a", "CountingPrimesSimple", "CountingPrimesSieve",
-  "CountingPrimesWheel", "CountingPrimesOddSieve", "CountingPrimesLucy", "CountingPrimesOddWheel", "GrumpyGordon", "Urlh", "abc101a",
-  "counting_primes_simple", "counting_primes_sieve", "counting_primes_wheel",
-  "counting_primes_odd_sieve", "counting_primes_lucy", "counting_primes_odd_wheel", "counting_primes_grumpygordon"]
+defaultTargets = ["TinyFive", "DecNumber", "CountingPrimesSpec", "Abc101a", "CountingPrimesTrialDivision",
+  "CountingPrimesSieve", "CountingPrimesWheel", "CountingPrimesOddSieve", "CountingPrimesLucy",
+  "CountingPrimesOddWheel", "GrumpyGordon", "Urlh", "abc101a",
+  "counting_primes_trial_division", "counting_primes_sieve", "counting_primes_wheel",
+  "counting_primes_odd_sieve", "counting_primes_lucy", "counting_primes_odd_wheel",
+  "counting_primes_grumpygordon"]
 
 # Shared: the machine model and lemmas more than one project uses.
 [[lean_lib]]
@@ -15,10 +17,16 @@ name = "Abc101a"
 srcDir = "abc101a/lean"
 roots = ["Abc101a"]
 
+# The correctness definition shared by every counting-primes program.
 [[lean_lib]]
-name = "CountingPrimesSimple"
-srcDir = "counting_primes/simple/lean"
-roots = ["CountingPrimes"]
+name = "CountingPrimesSpec"
+srcDir = "counting_primes/lean"
+roots = ["CountingPrimesSpec"]
+
+[[lean_lib]]
+name = "CountingPrimesTrialDivision"
+srcDir = "counting_primes/trial_division/lean"
+roots = ["CountingPrimesTrialDivision"]
 
 [[lean_lib]]
 name = "CountingPrimesSieve"
@@ -71,9 +79,9 @@ srcDir = "abc101a/lean"
 root = "Abc101aMain"
 
 [[lean_exe]]
-name = "counting_primes_simple"
-srcDir = "counting_primes/simple/lean"
-root = "PrimeMain"
+name = "counting_primes_trial_division"
+srcDir = "counting_primes/trial_division/lean"
+root = "TrialDivisionMain"
 
 [[lean_exe]]
 name = "counting_primes_sieve"

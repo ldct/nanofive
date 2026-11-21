@@ -1,5 +1,6 @@
 import TinyFive.Machine
 import TinyFive.Primes
+import CountingPrimesSpec
 import TinyFive.SieveMemory
 import TinyFive.SieveMath
 import SieveCost
@@ -488,5 +489,17 @@ theorem correct_uniform_fuel :
   refine ⟨13+189*10^11, fun n hn => ?_⟩
   obtain ⟨fuel, hb, h⟩ := correct n hn
   exact is_exited_with_output_mono (by omega) h
+
+/-- **Correctness with program size.** With memory for the flags of every input below `10^11`, the
+loaded program satisfies `IsCorrect`, and its memory holds only 72 nonzero bytes. Zero padding
+is free, so the size bound rules out lookup tables. -/
+theorem correct_with_size : ∃ m, IsCorrect m ∧ programSize m = 72 := by
+  refine ⟨load 64 prog (128+10^11) [], ?_, ?_⟩
+  · exact isCorrect_of_load prog (fun n => 128+n+1) (128+10^11)
+      (fun _ _ => by have : 4 * prog.length ≤ 128 := (by decide); omega)
+      (fun _ hn => by omega)
+      correct_uniform_fuel
+  · rw [programSize_load prog 128 (128+10^11) (by decide) (by omega)]
+    decide +kernel
 
 end TinyFive.CountingPrimesSieve

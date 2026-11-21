@@ -18,7 +18,7 @@ printing π(n) and a newline, within the budget's number of instructions.
 
 | Folder | Algorithm | Code | Proved budget | Uniform bound (all `n < 10^11`) | Instructions at N = 1,000 |
 |---|---|---|---|---|---:|
-| `simple/` | trial division by repeated subtraction | 23 instructions (92 bytes) | `11 + 114*n*n` | `11 + 114*10^22` ≈ 1.14×10²⁴ | 2,799,716 |
+| `trial_division/` | trial division by repeated subtraction | 23 instructions (92 bytes) | `11 + 114*n*n` | `11 + 114*10^22` ≈ 1.14×10²⁴ | 2,799,716 |
 | `sieve/` | byte-array Sieve of Eratosthenes | 25 instructions (100 bytes) | `13 + 189*n` | `13 + 189*10^11` ≈ 1.89×10¹³ | 16,301 |
 | `wheel/` | sieve visiting only candidates coprime to 30 | 128 bytes + 12-byte gap table | `15 + 191*n` | `15 + 191*10^11` ≈ 1.91×10¹³ | 12,787 |
 | `odd_sieve/` | odds-only sieve marking from p², counting 16 flags per iteration | 50 instructions (200 bytes) | `72 + 33*n` | `72 + 33*10^11` ≈ 3.3×10¹² | 1,846 |
