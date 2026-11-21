@@ -1,26 +1,23 @@
 import TinyFive.Machine
 import TinyFive.Primes
 import TinyFive.TrialDivisionCost
-import CountingPrimesSpec
+import CountingPrimesLoad
+import TrialDivisionProgram
 
 /-!
-# Correctness of `counting_primes_trial_division.py`
+# Correctness proof of `TrialDivisionProgram`
 
-The program `prog`, loaded into a RISCV64 machine, with registers initialized as follows:
-  - `a0` set to `n`
-  - everything else (including `pc`) set to 0
-and with `ECALL` defined by the RARS calling convention, when run, terminates with `π(n)` printed on one line, for all `n < 10^11`.
+The exact RV64I instruction words implement trial division by repeated subtraction. The proof
+composes symbolic execution blocks using `TinyFive.run_add` from `Machine`, then uses decreasing
+natural-number measures for subtraction, divisor search, and candidate search.
+
+`correct_bounded` gives the budget `11 + (n-1)*(6 + scanCost n 2 (n-2))`, where the scan sums
+`6 + 3*(n/d)` over the possible divisors. Thirty-six dyadic blocks bound the quotient sum by
+`36*n` below `10^11 < 2^37`, which gives `correct`'s `11 + 114*n*n`.
 -/
 namespace TinyFive.CountingPrimesTrialDivision
 
 open CountingPrimes TrialDivisionCost
-
-def prog : List (BitVec 32) := [
-  0x00200293, 0x00000313, 0x02556a63, 0x00200393, 0x02538063,
-  0x00028e13, 0x007e6663, 0x407e0e33, 0xff9ff06f, 0x000e0863,
-  0x00138393, 0xfe5ff06f, 0x00130313, 0x00128293, 0xfd1ff06f,
-  0x00030513, 0x00100893, 0x00000073, 0x00a00513, 0x00b00893,
-  0x00000073, 0x00a00893, 0x00000073]
 
 /-- Machine state with `prog` loaded. -/
 def initial (n : Nat) : Machine 64 :=
@@ -370,21 +367,17 @@ theorem correct_uniform_fuel :
   have := Nat.mul_le_mul (Nat.mul_le_mul_left 114 (Nat.le_of_lt hn)) (Nat.le_of_lt hn)
   exact is_exited_with_output_mono (by omega) h
 
-/-- **Correctness with program size.** With its 128 bytes of memory, the loaded program satisfies
-`IsCorrect`, and its memory holds only 68 nonzero bytes. Zero padding is free, so the size bound
-rules out lookup tables. -/
-private theorem correct_with_size : ∃ m, IsCorrect m ∧ programSize m = 68 := by
-  refine ⟨load 64 prog (128) [], ?_, ?_⟩
-  · exact isCorrect_of_load prog (fun _ => 128) (128)
-      (fun _ _ => by decide)
-      (fun _ _ => Nat.le_refl _)
-      correct_uniform_fuel
-  · rw [programSize_load prog 128 (128) (by decide) (by omega)]
-    decide +kernel
+/-- `initial'` meets the specification. -/
+theorem isCorrect : IsCorrect initial' :=
+  isCorrect_of_load prog (fun _ => 128) 128
+    (fun _ _ => by decide)
+    (fun _ _ => Nat.le_refl _)
+    correct_uniform_fuel
 
-/-- **There exists a 68-byte program that counts primes below `10^11`.** -/
-theorem exists_68_byte_prime_counter : ∃ m, IsCorrect m ∧ programSize m ≤ 68 := by
-  obtain ⟨m, hc, hs⟩ := correct_with_size
-  exact ⟨m, hc, Nat.le_of_eq hs⟩
+/-- `initial'` holds 68 nonzero bytes. Zero padding is free, so the size bound rules out
+lookup tables. -/
+theorem programSize_eq : programSize initial' = 68 := by
+  rw [initial', programSize_load prog 128 128 (by decide) (by omega)]
+  decide +kernel
 
 end TinyFive.CountingPrimesTrialDivision

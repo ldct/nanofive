@@ -1,6 +1,7 @@
 import TinyFive.Machine
 import TinyFive.Primes
-import CountingPrimesSpec
+import CountingPrimesLoad
+import OddSieveProgram
 import TinyFive.SieveMemory
 import TinyFive.SieveMath
 import TinyFive.TrialDivisionCost
@@ -24,18 +25,6 @@ which are never written. -/
 namespace TinyFive.CountingPrimesOddSieve
 open CountingPrimes SieveMemory OddSieveMath
 open TrialDivisionCost (quotientSum quotientSum_succ quotientSum_append quotientSum_le_dyadic)
-
-def prog : List (BitVec 32) := [
-  0x00100f13, 0x00af32b3, 0x00a282b3, 0x0012d513, 0x10050613,
-  0x10100e13, 0x10400e93, 0x00300f93, 0x02cef863, 0x000e4283,
-  0x00029a63, 0x000e8313, 0x01e30023, 0x01f30333, 0xfec36ce3,
-  0x001e0e13, 0x01fe8eb3, 0x002f8f93, 0x01fe8eb3, 0xfcceece3,
-  0x10000593, 0x00000313, 0x1f058393, 0x00767463, 0x00060393,
-  0x0005a283, 0x00530333, 0x0045a283, 0x00530333, 0x0085a283,
-  0x00530333, 0x00c5a283, 0x00530333, 0x01058593, 0xfc75eee3,
-  0x01035293, 0x00530333, 0x0ff37293, 0x40550533, 0x00835313,
-  0x0ff37313, 0x40650533, 0xfac5e6e3, 0x00100893, 0x00000073,
-  0x00a00513, 0x00b00893, 0x00000073, 0x00a00893, 0x00000073]
 
 /-- The memory size `counting_primes_odd_sieve.py` allocates: the code area, one flag per odd
 number up to `n`, and 16 bytes of padding for the word-summing count. -/
@@ -680,16 +669,17 @@ theorem correct_uniform_fuel :
   obtain ⟨fuel, hb, h⟩ := correct n hn
   exact is_exited_with_output_mono (by omega) h
 
-/-- **Correctness with program size.** With memory for the odd flags of every input below `10^11`,
-the loaded program satisfies `IsCorrect`, and its memory holds only 161 nonzero bytes. Zero
-padding is free, so the size bound rules out lookup tables. -/
-theorem correct_with_size : ∃ m, IsCorrect m ∧ programSize m = 161 := by
-  refine ⟨load 64 prog (memSize (10^11)) [], ?_, ?_⟩
-  · exact isCorrect_of_load prog memSize (memSize (10^11))
-      (fun _ _ => by have : 4 * prog.length ≤ 256 := (by decide); unfold memSize; omega)
-      (fun _ hn => by unfold memSize; omega)
-      correct_uniform_fuel
-  · rw [programSize_load prog 256 (memSize (10^11)) (by decide) (by unfold memSize; omega)]
-    decide +kernel
+/-- `initial'` meets the specification. -/
+theorem isCorrect : IsCorrect initial' :=
+  isCorrect_of_load prog memSize (256 + (10^11 + 1) / 2 + 16)
+    (fun _ _ => by have : 4 * prog.length ≤ 256 := (by decide); unfold memSize; omega)
+    (fun _ hn => by unfold memSize; omega)
+    correct_uniform_fuel
+
+/-- `initial'` holds 161 nonzero bytes. Zero padding is free, so the size bound rules out
+lookup tables. -/
+theorem programSize_eq : programSize initial' = 161 := by
+  rw [initial', programSize_load prog 256 (256 + (10^11 + 1) / 2 + 16) (by decide) (by omega)]
+  decide +kernel
 
 end TinyFive.CountingPrimesOddSieve

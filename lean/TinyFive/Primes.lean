@@ -1,7 +1,7 @@
 /-!
 # Prime-counting functions
 
-Definition of the prime-counting function independent of Mathlib
+Definition of the prime-counting function. This file is deliberately independent of Mathlib.
 -/
 namespace TinyFive.CountingPrimes
 

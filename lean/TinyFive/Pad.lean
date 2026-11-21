@@ -1,28 +1,16 @@
 import TinyFive.Machine
-import TinyFive.Primes
 
+/-!
+# Padding memory with zero bytes
+
+`run_pad`: padding memory with zero bytes does not change a run that never faults, because
+every access that succeeds in the smaller memory reads or writes the same bytes in the larger
+one. `load_eq_pad`: loading into a large memory is loading into a small one and padding.
+-/
 namespace TinyFive
 
-/-- Preload the input `n` in `a0`. -/
-def Machine.loadInput (m : Machine 64) (n : Nat) : Machine 64 :=
-  m.setReg 10 (BitVec.ofNat 64 n)
-
-namespace CountingPrimes
-
-/-- Number of nonzero bytes in the machine's memory. -/
-def programSize (m : Machine 64) : Nat := m.mem.countP (· ≠ 0)
-
-/--
-The machine `m` correctly implements the prime-counting function for all inputs below `10^11`.
--/
-def IsCorrect (m : Machine 64) : Prop :=
-  ∃ fuel, ∀ n < 10^11,
-    is_exited_with_output (run fuel (m.loadInput n)) (toString (countPrimes n) ++ "\n")
-
-/-! ## Padding memory with zero bytes -/
-
 /-- Append `k` zero bytes to memory. -/
-def _root_.TinyFive.Machine.pad {w : Nat} (m : Machine w) (k : Nat) : Machine w :=
+def Machine.pad {w : Nat} (m : Machine w) (k : Nat) : Machine w :=
   { m with mem := m.mem ++ Array.replicate k 0 }
 
 private theorem readBytes_append (mem z : Array (BitVec 8)) :
@@ -133,30 +121,5 @@ theorem load_eq_pad (words : List (BitVec 32)) (small large : Nat)
   congr 2
   omega
 
-/-- Zero padding does not change the program size. -/
-theorem programSize_load (words : List (BitVec 32)) (small large : Nat)
-    (hw : 4 * words.length ≤ small) (hs : small ≤ large) :
-    programSize (load 64 words large []) = programSize (load 64 words small []) := by
-  rw [load_eq_pad words small large hw hs]
-  simp [programSize, Machine.pad, Array.countP_append, Array.countP_replicate]
 
-/-- A program proved correct with `memSize n` bytes of memory for each input is correct as one
-machine with `large` bytes, provided `large` covers every `memSize n`. -/
-theorem isCorrect_of_load (words : List (BitVec 32)) (memSize : Nat → Nat) (large : Nat)
-    (hw : ∀ n < 10^11, 4 * words.length ≤ memSize n) (hl : ∀ n < 10^11, memSize n ≤ large)
-    (h : ∃ fuel, ∀ n < 10^11,
-      is_exited_with_output (run fuel ((load 64 words (memSize n) []).setReg 10
-        (BitVec.ofNat 64 n))) (toString (countPrimes n) ++ "\n")) :
-    IsCorrect (load 64 words large []) := by
-  obtain ⟨fuel, h⟩ := h
-  refine ⟨fuel, fun n hn => ?_⟩
-  obtain ⟨h1, h2⟩ := h n hn
-  have he : (load 64 words large []).loadInput n =
-      ((load 64 words (memSize n) []).setReg 10 (BitVec.ofNat 64 n)).pad (large - memSize n) := by
-    rw [load_eq_pad words (memSize n) large (hw n hn) (hl n hn)]
-    rfl
-  rw [he, run_pad _ _ _ (by rw [h1]; decide)]
-  exact ⟨h1, h2⟩
-
-end CountingPrimes
 end TinyFive

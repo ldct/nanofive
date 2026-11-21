@@ -77,7 +77,7 @@ def main():
     assert CODE_BYTES <= lucy.BASE - 8
     print(f"program size: {len(lucy.prog)} instructions / {CODE_BYTES} bytes", flush=True)
 
-    source = (LEAN / "CountingPrimesLucy.lean").read_text()
+    source = (LEAN / "LucyProgram.lean").read_text()
     body = re.search(r"def prog : List \(BitVec 32\) := \[(.*?)\]", source, re.S)
     assert body, "Lean instruction list not found"
     words = re.findall(r"0x[0-9a-fA-F]+", body.group(1))

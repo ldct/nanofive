@@ -93,7 +93,7 @@ def run_python(n):
 
 
 def main():
-    source = (LEAN / "CountingPrimesWheel.lean").read_text()
+    source = (LEAN / "WheelProgram.lean").read_text()
     body = re.search(r"def prog : List \(BitVec 32\) := \[(.*?)\]", source, re.S)
     assert body, "Lean instruction/data list not found"
     words = re.findall(r"0x[0-9a-fA-F]+", body.group(1))

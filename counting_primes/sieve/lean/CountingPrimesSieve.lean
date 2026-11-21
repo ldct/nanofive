@@ -1,6 +1,7 @@
 import TinyFive.Machine
 import TinyFive.Primes
-import CountingPrimesSpec
+import CountingPrimesLoad
+import SieveProgram
 import TinyFive.SieveMemory
 import TinyFive.SieveMath
 import SieveCost
@@ -32,14 +33,6 @@ not wall time or the host wrapper's input parsing and memory allocation.
 -/
 namespace TinyFive.CountingPrimesSieve
 open CountingPrimes SieveMemory SieveMath SieveCost
-
-/-- The twenty-five instruction words of `counting_primes_sieve.py`. -/
-def prog : List (BitVec 32) := [
-  0x00200293, 0x00000313, 0x00100f13, 0x08000f93, 0x02556a63,
-  0x005f8e33, 0x000e4e83, 0x020e9063, 0x00130313, 0x005283b3,
-  0x00756a63, 0x007f8e33, 0x01ee0023, 0x005383b3, 0xff1ff06f,
-  0x00128293, 0xfd1ff06f, 0x00030513, 0x00100893, 0x00000073,
-  0x00a00513, 0x00b00893, 0x00000073, 0x00a00893, 0x00000073]
 
 /-- Preload the input and allocate one zeroed flag byte for every index through `n`. -/
 def initial (n : Nat) : Machine 64 :=
@@ -490,16 +483,17 @@ theorem correct_uniform_fuel :
   obtain ⟨fuel, hb, h⟩ := correct n hn
   exact is_exited_with_output_mono (by omega) h
 
-/-- **Correctness with program size.** With memory for the flags of every input below `10^11`, the
-loaded program satisfies `IsCorrect`, and its memory holds only 72 nonzero bytes. Zero padding
-is free, so the size bound rules out lookup tables. -/
-theorem correct_with_size : ∃ m, IsCorrect m ∧ programSize m = 72 := by
-  refine ⟨load 64 prog (128+10^11) [], ?_, ?_⟩
-  · exact isCorrect_of_load prog (fun n => 128+n+1) (128+10^11)
-      (fun _ _ => by have : 4 * prog.length ≤ 128 := (by decide); omega)
-      (fun _ hn => by omega)
-      correct_uniform_fuel
-  · rw [programSize_load prog 128 (128+10^11) (by decide) (by omega)]
-    decide +kernel
+/-- `initial'` meets the specification. -/
+theorem isCorrect : IsCorrect initial' :=
+  isCorrect_of_load prog (fun n => 128+n+1) (128+10^11)
+    (fun _ _ => by have : 4 * prog.length ≤ 128 := (by decide); omega)
+    (fun _ hn => by omega)
+    correct_uniform_fuel
+
+/-- `initial'` holds 72 nonzero bytes. Zero padding is free, so the size bound rules out
+lookup tables. -/
+theorem programSize_eq : programSize initial' = 72 := by
+  rw [initial', programSize_load prog 128 (128+10^11) (by decide) (by omega)]
+  decide +kernel
 
 end TinyFive.CountingPrimesSieve

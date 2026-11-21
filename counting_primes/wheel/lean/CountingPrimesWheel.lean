@@ -1,6 +1,7 @@
 import TinyFive.Machine
 import TinyFive.Primes
-import CountingPrimesSpec
+import CountingPrimesLoad
+import WheelProgram
 import TinyFive.SieveMemory
 import TinyFive.SieveMath
 import TinyFive.TrialDivisionCost
@@ -18,15 +19,6 @@ every integer from 2 to `n`, not only to wheel candidates, lets the shared dyadi
 namespace TinyFive.CountingPrimesWheel
 open CountingPrimes SieveMemory SieveMath WheelMath
 open TrialDivisionCost (quotientSum quotientSum_succ quotientSum_append quotientSum_le_dyadic)
-
-def prog : List (BitVec 32) := [
-  0x00200293, 0x00000313, 0x00100f13, 0x10000f93, 0x00000593,
-  0x00b00613, 0x04556463, 0x005f8e33, 0x000e4e83, 0x020e9063,
-  0x00130313, 0x005283b3, 0x00756a63, 0x007f8e33, 0x01ee0023,
-  0x005383b3, 0xff1ff06f, 0x08058e13, 0x000e4e83, 0x01d282b3,
-  0x00158593, 0xfcc5e2e3, 0x00300593, 0xfbdff06f, 0x00030513,
-  0x00100893, 0x00000073, 0x00a00513, 0x00b00893, 0x00000073,
-  0x00a00893, 0x00000073, 0x04020201, 0x04020402, 0x00060206]
 
 def initial (n : Nat) : Machine 64 :=
   (load 64 prog (256+n+1) []).setReg 10 (BitVec.ofNat 64 n)
@@ -415,16 +407,17 @@ theorem correct_uniform_fuel :
   obtain ⟨fuel, hb, h⟩ := correct n hn
   exact is_exited_with_output_mono (by omega) h
 
-/-- **Correctness with program size.** With memory for the flags of every input below `10^11`, the
-loaded program satisfies `IsCorrect`, and its memory holds only 106 nonzero bytes. Zero padding
-is free, so the size bound rules out lookup tables. -/
-theorem correct_with_size : ∃ m, IsCorrect m ∧ programSize m = 106 := by
-  refine ⟨load 64 prog (256+10^11) [], ?_, ?_⟩
-  · exact isCorrect_of_load prog (fun n => 256+n+1) (256+10^11)
-      (fun _ _ => by have : 4 * prog.length ≤ 256 := (by decide); omega)
-      (fun _ hn => by omega)
-      correct_uniform_fuel
-  · rw [programSize_load prog 256 (256+10^11) (by decide) (by omega)]
-    decide +kernel
+/-- `initial'` meets the specification. -/
+theorem isCorrect : IsCorrect initial' :=
+  isCorrect_of_load prog (fun n => 256+n+1) (256+10^11)
+    (fun _ _ => by have : 4 * prog.length ≤ 256 := (by decide); omega)
+    (fun _ hn => by omega)
+    correct_uniform_fuel
+
+/-- `initial'` holds 106 nonzero bytes. Zero padding is free, so the size bound rules out
+lookup tables. -/
+theorem programSize_eq : programSize initial' = 106 := by
+  rw [initial', programSize_load prog 256 (256+10^11) (by decide) (by omega)]
+  decide +kernel
 
 end TinyFive.CountingPrimesWheel

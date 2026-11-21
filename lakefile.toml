@@ -1,5 +1,5 @@
 name = "tinyfive"
-defaultTargets = ["TinyFive", "DecNumber", "CountingPrimesSpec", "Abc101a", "CountingPrimesTrialDivision",
+defaultTargets = ["TinyFive", "DecNumber", "CountingPrimes", "Abc101a", "CountingPrimesTrialDivision",
   "CountingPrimesSieve", "CountingPrimesWheel", "CountingPrimesOddSieve", "CountingPrimesLucy",
   "CountingPrimesOddWheel", "GrumpyGordon", "Urlh", "abc101a",
   "counting_primes_trial_division", "counting_primes_sieve", "counting_primes_wheel",
@@ -17,36 +17,37 @@ name = "Abc101a"
 srcDir = "abc101a/lean"
 roots = ["Abc101a"]
 
-# The correctness definition shared by every counting-primes program.
+# The correctness definition shared by every counting-primes program, and the audited
+# statement of every program's result.
 [[lean_lib]]
-name = "CountingPrimesSpec"
+name = "CountingPrimes"
 srcDir = "counting_primes/lean"
-roots = ["CountingPrimesSpec"]
+roots = ["ForHumans.Spec", "ForHumans.Results", "CountingPrimesLoad"]
 
 [[lean_lib]]
 name = "CountingPrimesTrialDivision"
 srcDir = "counting_primes/trial_division/lean"
-roots = ["CountingPrimesTrialDivision"]
+roots = ["TrialDivisionProgram", "CountingPrimesTrialDivision"]
 
 [[lean_lib]]
 name = "CountingPrimesSieve"
 srcDir = "counting_primes/sieve/lean"
-roots = ["CountingPrimesSieve", "SieveCost", "SieveCostBound"]
+roots = ["SieveProgram", "CountingPrimesSieve", "SieveCost", "SieveCostBound"]
 
 [[lean_lib]]
 name = "CountingPrimesWheel"
 srcDir = "counting_primes/wheel/lean"
-roots = ["CountingPrimesWheel", "WheelMath"]
+roots = ["WheelProgram", "CountingPrimesWheel", "WheelMath"]
 
 [[lean_lib]]
 name = "CountingPrimesOddSieve"
 srcDir = "counting_primes/odd_sieve/lean"
-roots = ["CountingPrimesOddSieve", "OddSieveMath"]
+roots = ["OddSieveProgram", "CountingPrimesOddSieve", "OddSieveMath"]
 
 [[lean_lib]]
 name = "CountingPrimesLucy"
 srcDir = "counting_primes/lucy/lean"
-roots = ["CountingPrimesLucy", "LucyMath", "LucyMemory"]
+roots = ["LucyProgram", "CountingPrimesLucy", "LucyMath", "LucyMemory"]
 
 [[lean_lib]]
 name = "CountingPrimesOddWheel"
