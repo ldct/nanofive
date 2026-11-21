@@ -1,7 +1,7 @@
 name = "tinyfive"
 defaultTargets = ["TinyFive", "DecNumber", "CountingPrimes", "Abc101a", "CountingPrimesTrialDivision",
   "CountingPrimesSieve", "CountingPrimesWheel", "CountingPrimesOddSieve", "CountingPrimesLucy",
-  "CountingPrimesOddWheel", "GrumpyGordon", "Urlh", "abc101a",
+  "CountingPrimesOddWheel", "GrumpyGordon", "Urlh", "TweetNaCl", "abc101a",
   "counting_primes_trial_division", "counting_primes_sieve", "counting_primes_wheel",
   "counting_primes_odd_sieve", "counting_primes_lucy", "counting_primes_odd_wheel",
   "counting_primes_grumpygordon"]
@@ -72,6 +72,11 @@ roots = ["UrlDecode"]
 name = "DecNumber"
 srcDir = "decnumber/lean"
 roots = ["DecContextClear", "DecNumber.Replay", "DecNumber.Image", "DecNumber.Bounded"]
+
+[[lean_lib]]
+name = "TweetNaCl"
+srcDir = "tweetnacl/lean"
+roots = ["TweetNaCl.ForHumans.Spec", "TweetNaCl.Verify32Program"]
 
 # Executable models, run by the projects' tests.
 [[lean_exe]]

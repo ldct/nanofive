@@ -3,3 +3,4 @@ __pycache__/
 ratpoints/build/
 .lake/
 urlh/build/
+tweetnacl/build/
