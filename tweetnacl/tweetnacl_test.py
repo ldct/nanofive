@@ -3,6 +3,7 @@ import hashlib
 import os
 from pathlib import Path
 import re
+import struct
 import subprocess
 import sys
 
@@ -30,6 +31,101 @@ def run_call(m, entry, args, fuel):
   m.run(entry, end=RETURN, steps=fuel)
 
 
+def check_lean_image(m, symbols, source, symbol, entry_def, words_def):
+  entry = re.search(rf'^def {entry_def} : Nat :=\s*(0x[0-9a-fA-F]+|[0-9]+)\b',
+                    source, re.M)
+  words = re.search(rf'^def {words_def} : List \(BitVec 32\) :=\s*\[(.*?)\]',
+                    source, re.M | re.S)
+  assert entry and words, f'{symbol}: missing Lean image definitions'
+  literals = re.sub(r'--[^\n]*', '', words[1]).strip().removesuffix(',').split(',')
+  image = b''.join(int(word.strip(), 0).to_bytes(4, 'little') for word in literals)
+  address, size = symbols[symbol]
+  assert address == int(entry[1], 0) and size == len(image), (
+    f'{symbol}: Lean symbol address or size differs')
+  assert m.mem[address:address + size] == image, f'{symbol}: Lean instruction words differ'
+  return address
+
+
+def salsa20_reference(block_input, key, constant):
+  """Salsa20's column/row double round, with arithmetic modulo 2**32."""
+  state = struct.unpack('<16I', constant[:4] + key[:16] + constant[4:8] +
+                        block_input + constant[8:12] + key[16:] + constant[12:])
+  x = list(state)
+  mask = 0xffffffff
+
+  def rotl(value, count):
+    value &= mask
+    return ((value << count) | (value >> (32 - count))) & mask
+
+  def quarter(a, b, c, d):
+    x[b] ^= rotl(x[a] + x[d], 7)
+    x[c] ^= rotl(x[b] + x[a], 9)
+    x[d] ^= rotl(x[c] + x[b], 13)
+    x[a] ^= rotl(x[d] + x[c], 18)
+
+  for _ in range(10):
+    quarter(0, 4, 8, 12)
+    quarter(5, 9, 13, 1)
+    quarter(10, 14, 2, 6)
+    quarter(15, 3, 7, 11)
+    quarter(0, 1, 2, 3)
+    quarter(5, 6, 7, 4)
+    quarter(10, 11, 8, 9)
+    quarter(15, 12, 13, 14)
+  return struct.pack('<16I', *((a + b) & mask for a, b in zip(x, state)))
+
+
+def test_salsa20(m, symbols):
+  source = (HERE / 'lean/TweetNaCl/Salsa20Program.lean').read_text()
+  core = check_lean_image(m, symbols, source, 'core', 'coreEntry', 'coreWords')
+  wrapper = check_lean_image(m, symbols, source, 'crypto_core_salsa20_tweet',
+                             'entry', 'wrapperWords')
+  sigma = b'expand 32-byte k'
+  # Bernstein, Salsa20 specification (2005-04-27), section 9, first example.
+  vector = (bytes(range(101, 117)), bytes(range(1, 17)) + bytes(range(201, 217)), sigma)
+  known_output = bytes.fromhex(
+    '45254427290f6bc1ff8b7a06aae9d9625990b66a1533c841ef31de22d772287e'
+    '68c507e1c5991f02664e4cb054f5f6b8b1a0858206489577c0c384ecea67f64a')
+  assert salsa20_reference(*vector) == known_output, 'Salsa20 reference fails known vector'
+
+  cases = [
+    ('spec vector', *vector),
+    ('all zero', bytes(16), bytes(32), bytes(16)),
+    ('all ones', b'\xff' * 16, b'\xff' * 32, b'\xff' * 16),
+    ('high bits', b'\x00\x00\x00\x80' * 4, b'\xaa\x55' * 16, b'\x55\xaa' * 8),
+    ('counter max', bytes(range(8)) + b'\xff' * 8, bytes(range(32)), sigma),
+  ]
+  for i in range(8):
+    block = hashlib.sha512(f'Salsa20 differential case {i}'.encode()).digest()
+    cases.append((f'deterministic {i}', block[:16], block[16:48], block[48:]))
+
+  for name, block_input, key, constant in cases:
+    expected = salsa20_reference(block_input, key, constant)
+    # Measured by counting step() calls and tracking the lowest SP.
+    for entry, extra_args, fuel, stack_bytes in (
+        (core, [0], 11_541, 512), (wrapper, [], 11_550, 528)):
+      label = f'Salsa20 {name} at {entry:#x}'
+      m, _ = fresh()
+      offset = 0 if name == 'spec vector' else 1  # Byte buffers need no alignment.
+      out, inp, key_addr, const_addr = (addr + offset for addr in
+                                        (LEFT, RIGHT, 0x80200, 0x80300))
+      for addr, data in ((inp, block_input), (key_addr, key), (const_addr, constant)):
+        m.mem[addr:addr + len(data)] = data
+      out_end = out + len(expected)
+      m.mem[out:out_end] = bytes(b ^ 0xff for b in expected)
+      stack_bottom = MEM_SIZE - stack_bytes
+      before = bytes(m.mem[:stack_bottom])
+      m.x[14] = 1  # The wrapper must supply h=0 itself; the direct call passes it.
+      run_call(m, entry, [out, inp, key_addr, const_addr, *extra_args], fuel)
+      assert not m.halted and m.pc == RETURN and m.x[2] == MEM_SIZE, f'{label}: bad return'
+      if entry == wrapper:
+        assert m.x[10] == 0, f'{label}: wrapper returned nonzero'
+      assert m.mem[out:out_end] == expected, f'{label}: output differs'
+      assert m.mem[:out] == before[:out] and m.mem[out_end:stack_bottom] == before[out_end:], (
+        f'{label}: wrote outside output and stack')
+  return len(cases)
+
+
 def main():
   subprocess.run([HERE / 'build.sh'], check=True)
   tool = os.environ.get('CROSS_COMPILE') or 'riscv64-unknown-elf-'
@@ -45,14 +141,9 @@ def main():
   m.run(entry, steps=1000)
   assert m.halted and m.exit_code == 0, 'ELF smoke test failed'
 
-  verify, size = symbols['crypto_verify_32_tweet']
   source = (HERE / 'lean/TweetNaCl/Verify32Program.lean').read_text()
-  expected_entry = int(re.search(r'def entry : Nat := (0x[0-9a-f]+)', source)[1], 16)
-  words = re.search(r'def prog : List \(BitVec 32\) := \[(.*?)\]', source, re.S)[1]
-  image = b''.join(int(word, 16).to_bytes(4, 'little')
-                   for word in re.findall(r'0x[0-9a-f]{8}\b', words))
-  assert verify == expected_entry and size == len(image), 'Lean symbol address or size differs'
-  assert m.mem[verify:verify + size] == image, 'Lean instruction words differ'
+  verify = check_lean_image(m, symbols, source, 'crypto_verify_32_tweet', 'entry', 'prog')
+  salsa_cases = test_salsa20(m, symbols)
 
   left = bytes(range(32))
   cases = [(RIGHT, left), (LEFT, left)]
@@ -82,7 +173,8 @@ def main():
   run_call(m, keypair, [LEFT, RIGHT], 1000)
   assert m.halted and m.exit_code == 125, 'key generation must fail without entropy'
   print(f'TweetNaCl RV64IM: ELF and Lean code match; {len(cases)} verify and '
-        f'{len(messages)} SHA-512 cases passed; key generation fails closed.')
+        f'{len(messages)} SHA-512 cases passed; {salsa_cases} Salsa20 cases passed at '
+        'both entry points; key generation fails closed.')
 
 
 if __name__ == '__main__':

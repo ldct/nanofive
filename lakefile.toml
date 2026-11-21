@@ -76,7 +76,13 @@ roots = ["DecContextClear", "DecNumber.Replay", "DecNumber.Image", "DecNumber.Bo
 [[lean_lib]]
 name = "TweetNaCl"
 srcDir = "tweetnacl/lean"
-roots = ["TweetNaCl.ForHumans.Spec", "TweetNaCl.Verify32Program"]
+roots = ["TweetNaCl.ForHumans.Spec", "TweetNaCl.Verify32Program",
+  "TweetNaCl.ForHumans.Salsa20Spec", "TweetNaCl.Salsa20Program",
+  "TweetNaCl.Salsa20LowWords", "TweetNaCl.Salsa20Schedule",
+  "TweetNaCl.Salsa20WideIO", "TweetNaCl.Salsa20Replay",
+  "TweetNaCl.Salsa20Slots", "TweetNaCl.Salsa20Circuit",
+  "TweetNaCl.Salsa20Symbolic", "TweetNaCl.Salsa20Reference", "TweetNaCl.Salsa20RefCert",
+  "TweetNaCl.Salsa20Correct", "TweetNaCl.ForHumans.Salsa20Result"]
 
 # Executable models, run by the projects' tests.
 [[lean_exe]]

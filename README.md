@@ -29,7 +29,7 @@ One folder per project, with its tests, and its proofs in
 | `ratpoints/` | Michael Stoll's ratpoints, compiled C with GMP |
 | `urlh/` | jwerle/url.h, compiled C, with a proof of its `decode_percent` |
 | `decnumber/` | jq's decNumber on RV64IM, with differential tests and binary proofs of status clearing, bounded exact parsing and comparison |
-| `tweetnacl/` | TweetNaCl on RV64IM, with emulator tests and a Lean specification and code image for `crypto_verify_32` |
+| `tweetnacl/` | TweetNaCl on RV64IM, with a Lean proof of the linked Salsa20 core and emulator tests |
 
 ## Running
 
