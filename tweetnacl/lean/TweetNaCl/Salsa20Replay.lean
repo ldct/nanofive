@@ -503,6 +503,75 @@ theorem initial_related {m : Machine 64}
   next he => simpa [Known, show r = 1 from Fin.ext he.symm] using hra
   simp [Known]
 
+/-- The instruction words `words` are stored little-endian from `base`: byte `j`
+    of word `i` is at address `base + 4 * i + j`. -/
+def WordsAt (m : Machine 64) (base : Nat) (words : List (BitVec 32)) : Prop :=
+  ∀ i (hi : i < words.length) j, j < 4 →
+    m.mem[base + 4 * i + j]? = some (words[i].extractLsb' (8 * j) 8)
+
+private theorem write_agrees {bytes : KnownBytes} {mem : Array Byte} (h : Agrees bytes mem)
+    {addr n : Nat} {x : Word}
+    (hx : ∀ j, j < n → mem[addr + j]? = some ((x >>> (8 * j)).setWidth 8)) :
+    Agrees (write bytes addr (some x) n) mem := by
+  induction n generalizing bytes addr x with
+  | zero => exact h
+  | succ n ih =>
+    simp only [write, Option.map_some]
+    refine ih ?_ ?_
+    · intro i b hb
+      change (put bytes addr (some (x.setWidth 8)))[i]? = some b at hb
+      rw [lookup_put] at hb
+      split at hb
+      · subst i
+        cases hb
+        simpa using hx 0 (by omega)
+      · exact h i b hb
+    · intro j hj
+      have hs : (x >>> 8) >>> (8 * j) = x >>> (8 * (j + 1)) := by
+        apply BitVec.eq_of_toNat_eq
+        simp only [BitVec.toNat_ushiftRight, ← Nat.shiftRight_add]
+        congr 1
+        omega
+      rw [hs, show addr + 1 + j = addr + (j + 1) by omega]
+      exact hx (j + 1) (by omega)
+
+private theorem byte_of_word (w : BitVec 32) {j : Nat} (hj : j < 4) :
+    ((w.setWidth 64 >>> (8 * j)).setWidth 8) = w.extractLsb' (8 * j) 8 := by
+  ext k hk
+  simp only [BitVec.getElem_setWidth, BitVec.getLsbD_ushiftRight, BitVec.getElem_extractLsb',
+    BitVec.getLsbD_setWidth]
+  have : 8 * j + k < 64 := by omega
+  simp [this]
+
+private theorem addWords_agrees {bytes : KnownBytes} {mem : Array Byte} (h : Agrees bytes mem)
+    {base : Nat} {words : List (BitVec 32)}
+    (hw : ∀ i (hi : i < words.length) j, j < 4 →
+      mem[base + 4 * i + j]? = some (words[i].extractLsb' (8 * j) 8)) :
+    Agrees (addWords base words bytes) mem := by
+  unfold addWords
+  suffices ∀ (l : List (BitVec 32 × Nat)) (b : KnownBytes), (∀ p ∈ l, p ∈ words.zipIdx) →
+      Agrees b mem →
+      Agrees (l.foldl (fun b (w, i) => write b (base + 4 * i) (some (w.setWidth 64)) 4) b) mem from
+    this _ _ (fun _ hp => hp) h
+  intro l
+  induction l with
+  | nil => intro b _ hb; exact hb
+  | cons p l ih =>
+    intro b hl hb
+    refine ih _ (fun q hq => hl q (List.mem_cons_of_mem _ hq)) ?_
+    obtain ⟨w, i⟩ := p
+    obtain ⟨hi, he⟩ := List.mem_zipIdx' (hl _ List.mem_cons_self)
+    refine write_agrees hb fun j hj => ?_
+    rw [byte_of_word _ hj, he]
+    exact hw i hi j hj
+
+/-- Plain memory assumptions for the checker's code image. -/
+theorem image_agrees {m : Machine 64}
+    (hcore : WordsAt m Salsa20Program.coreEntry Salsa20Program.coreWords)
+    (hwrap : WordsAt m Salsa20Program.entry Salsa20Program.wrapperWords) :
+    Agrees image m.mem :=
+  addWords_agrees (addWords_agrees (fun _ _ h => by simp at h) hcore) hwrap
+
 -- Abstract the evaluated option so that kernel conversion does not unfold the
 -- 11,550-step execution when checking a proof about its projections.
 private opaque checkedResult :

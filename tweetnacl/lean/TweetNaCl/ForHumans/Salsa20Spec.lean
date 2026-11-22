@@ -101,7 +101,7 @@ def core (input : Bytes 16) (key : Bytes 32) (constant : Bytes 16) : Bytes 64 :=
   encode (coreWords (initialState input key constant))
 
 /-- The 32-byte-key expansion example in Bernstein's specification, §9. -/
-theorem core_knownAnswer :
+example :
     core #v[101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116]
       #v[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
          201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 216]

@@ -22,7 +22,7 @@ roots = ["Abc101a"]
 [[lean_lib]]
 name = "CountingPrimes"
 srcDir = "counting_primes/lean"
-roots = ["ForHumans.Spec", "ForHumans.Results", "CountingPrimesLoad"]
+roots = ["ForHumans.Spec", "ForHumans.Results", "ForHumans.Smallest", "CountingPrimesLoad"]
 
 [[lean_lib]]
 name = "CountingPrimesTrialDivision"

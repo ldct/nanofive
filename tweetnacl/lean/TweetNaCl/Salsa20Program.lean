@@ -2,7 +2,10 @@ namespace TweetNaCl.Salsa20Program
 
 def coreEntry : Nat := 0x30
 
-/-- Shared Salsa20/HSalsa20 helper, including both output branches. -/
+/-- Linked RV64IM machine code of the static helper
+`sv core(u8 *out,const u8 *in,const u8 *k,const u8 *c,int h)` in
+`tweetnacl/vendor/tweetnacl.c`, shared by Salsa20 (`h = 0`) and HSalsa20
+(`h = 1`); the image includes both output branches. -/
 def coreWords : List (BitVec 32) := [
   0xe0010113, 0x0a010e93, 0x1e813c23, 0x1e913823, 0x1f213423,
   0x1d513823, 0x1d613423, 0x1b813c23, 0x1b913823, 0x00068493,
@@ -58,7 +61,10 @@ def coreWords : List (BitVec 32) := [
 
 def entry : Nat := 0x114c
 
-/-- Public Salsa20 core wrapper, which calls the helper with h = 0. -/
+/-- Linked RV64IM machine code of
+`int crypto_core_salsa20(u8 *out,const u8 *in,const u8 *k,const u8 *c)` in
+`tweetnacl/vendor/tweetnacl.c` (linked as `crypto_core_salsa20_tweet`), which
+calls `core(out,in,k,c,0)` and returns 0. -/
 def wrapperWords : List (BitVec 32) := [
   0xff010113, 0x00000713, 0x00113423, 0xfffff097, 0xed8080e7,
   0x00813083, 0x00000513, 0x01010113, 0x00008067]

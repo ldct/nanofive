@@ -9,11 +9,8 @@ import CountingPrimesLucy
 
 To check the results, read
 
-* `ForHumans/Spec.lean`: `IsCorrect` and `programSize`;
-* each `<variant>/lean/*Program.lean`: the machine code `prog` and the machine `initial'`;
-* this file;
-* the definitions they rest on: `TinyFive.Machine` and `CountingPrimes.countPrimes` in
-  `lean/TinyFive/Primes.lean`.
+* `ForHumans/Spec.lean`: `IsCorrect` and `programSize`
+* (optional) each `<variant>/lean/*Program.lean`: the machine code `prog` and the machine `initial'` to check the actual machine code
 -/
 namespace TinyFive.CountingPrimes
 
