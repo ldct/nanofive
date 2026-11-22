@@ -1,7 +1,7 @@
 name = "tinyfive"
 defaultTargets = ["TinyFive", "DecNumber", "CountingPrimes", "Abc101a", "CountingPrimesTrialDivision",
   "CountingPrimesSieve", "CountingPrimesWheel", "CountingPrimesOddSieve", "CountingPrimesLucy",
-  "CountingPrimesOddWheel", "GrumpyGordon", "Urlh", "TweetNaCl", "NaClSalsa20", "abc101a",
+  "CountingPrimesOddWheel", "GrumpyGordon", "Urlh", "TweetNaCl", "NaClSalsa20", "LibsodiumSalsa20", "NettleSalsa20", "abc101a",
   "counting_primes_trial_division", "counting_primes_sieve", "counting_primes_wheel",
   "counting_primes_odd_sieve", "counting_primes_lucy", "counting_primes_odd_wheel",
   "counting_primes_grumpygordon"]
@@ -94,6 +94,20 @@ roots = ["NaClSalsa20.Program", "NaClSalsa20.Wire", "NaClSalsa20.WireSound",
   "NaClSalsa20.Symbolic", "NaClSalsa20.SymbolicSound", "NaClSalsa20.Reference",
   "NaClSalsa20.Call", "NaClSalsa20.IO", "NaClSalsa20.ForHumans.Salsa20Result",
   "NaClSalsa20.ForHumans.Salsa20IOResult"]
+
+# libsodium 1.0.22's reference Salsa20 core, with the proof machinery of NaClSalsa20.
+[[lean_lib]]
+name = "LibsodiumSalsa20"
+srcDir = "libsodium/lean"
+roots = ["LibsodiumSalsa20.Program", "LibsodiumSalsa20.Call", "LibsodiumSalsa20.IO",
+  "LibsodiumSalsa20.ForHumans.Salsa20Result", "LibsodiumSalsa20.ForHumans.Salsa20IOResult"]
+
+# Nettle 3.10.2's _nettle_salsa20_core, with the proof machinery of NaClSalsa20.
+[[lean_lib]]
+name = "NettleSalsa20"
+srcDir = "nettle/lean"
+roots = ["NettleSalsa20.Program", "NettleSalsa20.Call", "NettleSalsa20.IO",
+  "NettleSalsa20.ForHumans.Salsa20Result", "NettleSalsa20.ForHumans.Salsa20IOResult"]
 
 # Executable models, run by the projects' tests.
 [[lean_exe]]

@@ -30,6 +30,9 @@ One folder per project, with its tests, and its proofs in
 | `urlh/` | jwerle/url.h, compiled C, with a proof of its `decode_percent` |
 | `decnumber/` | jq's decNumber on RV64IM, with differential tests and binary proofs of status clearing, bounded exact parsing and comparison |
 | `tweetnacl/` | TweetNaCl on RV64IM, with a Lean proof of the linked Salsa20 core and emulator tests |
+| `nacl/` | NaCl 20110221's reference Salsa20 core on RV64IM, proved against the TweetNaCl Salsa20 specification |
+| `libsodium/` | libsodium 1.0.22's `crypto_core_salsa20` on RV64IM, proved against the same specification |
+| `nettle/` | Nettle 3.10.2's `_nettle_salsa20_core` on RV64IM, proved against the same specification |
 
 ## Running
 

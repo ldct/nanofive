@@ -1,0 +1,15 @@
+Unmodified files from libsodium 1.0.22 (Frank Denis; ISC license, see LICENSE).
+https://libsodium.org/
+https://download.libsodium.org/libsodium/releases/libsodium-1.0.22.tar.gz
+
+SHA-256 of the release tarball:
+adbdd8f16149e81ac6078a03aca6fc03b592b89ef7b5ed83841c086191be3349  libsodium-1.0.22.tar.gz
+
+Files taken from the tarball (paths relative to libsodium-1.0.22/), SHA-256:
+508a76d186356c0dd807a670ef510964f8724557024796a2c426c6c0e19ab683  LICENSE
+140bc08136a05e0d57aa829a5b49969d72a826602a2cbd4f0e0589f195750b4c  src/libsodium/crypto_core/salsa/ref/core_salsa_ref.c
+614992c472e5c2bad2ba8d90a4b6d9023db3774847e3541d5c87ad4cb59d69d0  src/libsodium/include/sodium/crypto_core_salsa20.h
+1fce6f1b2a28c7764ba7ed99fefabefa2cbca688ce86e2574cc08ae235c8c3fd  src/libsodium/include/sodium/crypto_core_salsa2012.h
+f5f40276f7f06f3478750037c56b8e29b1717588b75bd1a3769ccc54f73a709a  src/libsodium/include/sodium/crypto_core_salsa208.h
+acc6ee537f831d535b0607be90f05150103765b7ca82170fd61a85bd5e6f73ff  src/libsodium/include/sodium/export.h
+9a652cc7be3ca2137e6126819bb403887c4d152b618be652be4708a618f18d3a  src/libsodium/include/sodium/private/common.h

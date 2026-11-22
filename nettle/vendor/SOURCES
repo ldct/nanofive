@@ -1,0 +1,21 @@
+Unmodified files from GNU Nettle 3.10.2 (Niels Möller and others; LGPLv3+ or GPLv2+, see
+COPYING.LESSERv3, COPYINGv2 and COPYINGv3). salsa20-core-internal.c is based on D. J.
+Bernstein's public-domain salsa20-ref.c.
+https://www.lysator.liu.se/~nisse/nettle/
+https://ftp.gnu.org/gnu/nettle/nettle-3.10.2.tar.gz
+
+SHA-256 of the release tarball (its GPG signature, nettle-3.10.2.tar.gz.sig, verifies with
+Niels Möller's key 343C2FF0FBEE5EC2EDBEF399F3599FF828C67298 from the GNU keyring):
+fe9ff51cb1f2abb5e65a6b8c10a92da0ab5ab6eaf26e7fc2b675c45f1fb519b5  nettle-3.10.2.tar.gz
+
+Files taken from the tarball (paths relative to nettle-3.10.2/), SHA-256:
+1c73bba17204267469ac5aa4ca5f332ff7088d2046ed042218f9547971587e8e  bswap-internal.h
+a853c2ffec17057872340eee242ae4d96cbf2b520ae27d903e1b2fef1a5f9d1c  COPYING.LESSERv3
+8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643  COPYINGv2
+e6037104443f9a7829b2aa7c5370d0789a7bda3ca65a0b904cdc0c2e285d9195  COPYINGv3
+12e0862b79fb90a68167a1bee63d5bb92dd85b2b0c6ad154b6a081431a08b1dd  macros.h
+94fbd0d196da3856f9a02f471efee53425dace7edf2ccc96b2fc394afc0ed013  nettle-types.h
+02cb98d7b68bd895fe26752c5f10d7eb23623dff90238998e019c26994c6739b  README
+f46043bb1afd843aaf35a72f8edbea46f20db9b8400b25ee14a47f29e808e49f  salsa20-core-internal.c
+3c095ca322ea107053713f8a805a157d4121a7b9d8b976cfa8ccc5d2d85a641a  salsa20-internal.h
+a025e8f7c8da851cceeb22a40eb1c04d00e9e9e38cf41df85183ab91cc757c7e  salsa20.h
