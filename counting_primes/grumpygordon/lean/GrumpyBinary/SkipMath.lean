@@ -8,6 +8,8 @@ open CountingPrimes SieveMath LucyMath GrumpyGordon
 def SkipMarked (p i : Nat) : Prop :=
   ∃ q, 3 ≤ q ∧ q < p ∧ Prime q ∧ (i = q ∨ (q ∣ i ∧ q * q ≤ i ∧ i % 2 = 1))
 
+noncomputable instance (p i : Nat) : Decidable (SkipMarked p i) := Classical.propDecidable _
+
 theorem prime_factor (n : Nat) (hn : 2 ≤ n) : ∃ q, Prime q ∧ q ∣ n ∧ q ≤ n := by
   induction n using Nat.strongRecOn with
   | _ n ih =>

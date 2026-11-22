@@ -28,7 +28,7 @@ theorem dec_loop (x : Regs 64) (mem : Array (BitVec 8)) (out : String) (A s0 e c
     (Sm new : Nat → Nat) (hmem : Prefix image mem 1236) (hsz : mem.size = 4194304)
     (h6 : x.get 6 = bv t) (h7 : x.get 7 = bv e) (h30 : x.get 30 = bv c) (h20 : x.get 20 = bv A)
     (hA : 1236 ≤ A) (hAs : A + s0 * 4 ≤ 4194304) (hs0 : s0 ≤ 200000) (he : 1 ≤ e) (het : e ≤ t + 1)
-    (hts : t < s0) (hSm : ∀ u, u < s0 → Sm u < 200000)
+    (hts : t < s0) (hSm : ∀ u, u < s0 → Sm u < 400000)
     (hnew : ∀ u, e ≤ u → u ≤ t → c ≤ Sm u ∧ new u = Sm u - c)
     (harr : Arr32 mem A s0 (fun u => if t < u then new u else Sm u)) :
     ∃ n y mem', run n ⟨x, bv 932, mem, [], out, .running⟩ = ⟨y, bv 940, mem', [], out, .running⟩ ∧
@@ -102,7 +102,7 @@ theorem upd_loop (x : Regs 64) (mem : Array (BitVec 8)) (out : String) (A v s0 p
     (H : ∀ j', j' % 2 = 1 → p ≤ j' → j' ≤ j → ∀ u, j' * p / 2 ≤ u → u < (j' + 2) * p / 2 → u < s0 →
       pc ≤ Sm (j' / 2) ∧ Sm (j' / 2) - pc ≤ Sm u ∧ new u = Sm u - (Sm (j' / 2) - pc))
     (H0 : ∀ u, u < s0 → u < p * p / 2 → new u = Sm u)
-    (hSm : ∀ u, u < s0 → Sm u < 200000)
+    (hSm : ∀ u, u < s0 → Sm u < 400000)
     (harr : Arr32 mem A s0 (fun u => if i < u then new u else Sm u)) :
     ∃ n y mem', run n ⟨x, bv 716, mem, [], out, .running⟩ = ⟨y, bv 720, mem', [], out, .running⟩ ∧
       Same mem mem' A (A + s0 * 4) ∧ Arr32 mem' A s0 new ∧

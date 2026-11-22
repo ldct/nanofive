@@ -107,9 +107,9 @@ structure CBounds (A B Cb D N v p pc s : Nat) : Prop where
   hpv : p ≤ v
   hN : N < 100000000000
   hA : 1248 ≤ A
-  hB : A + 200000 * 4 ≤ B
-  hC : B + 200000 * 4 ≤ Cb
-  hD : Cb + 200000 * 8 ≤ D
+  hB : A + s * 4 ≤ B
+  hC : B + s * 4 ≤ Cb
+  hD : Cb + s * 8 ≤ D
   hDv : D + 400000 < 4194192
   hpc : pc < 200000
 
@@ -119,8 +119,8 @@ theorem compact_keep_small (x : Regs 64) (mem : Array (BitVec 8)) (out : String)
     (hmem : Prefix image mem 1236) (hsz : mem.size = 4194304)
     (h17 : x.get 17 = bv k) (h16 : x.get 16 = bv ns)
     (hk : k < s) (hns : ns ≤ k) (hdv : d ≤ v)
-    (hdp : d * p ≤ v) (hce : pc ≤ ce) (hce' : ce < 200000) (hlk : q ≤ lk) (hlk' : lk < 100000000000)
-    (hq : q < 100000000000) (hidx : ce - pc < 200000)
+    (hdp : d * p ≤ v) (hce : pc ≤ ce) (hce' : ce < 400000) (hlk : q ≤ lk) (hlk' : lk < 100000000000)
+    (hq : q < 100000000000) (hidx : ce - pc < 400000)
     (hR : readBytes mem (B + k * 4) 4 = some (BitVec.ofNat 32 d))
     (hS : readBytes mem (D + d) 1 = some (BitVec.ofNat 8 0))
     (hL : readBytes mem (k * 8 + Cb) 8 = some (bv lk))
@@ -226,8 +226,8 @@ structure CMath (L : List Nat) (keep : Nat → Bool) (oldv newv quot Sm Sk : Nat
     d * p < 100000000000 ∧ 1 ≤ N / (d * p) ∧ N / (d * p) ≤ v ∧ Sm ((N / (d * p) - 1) / 2) = quot d
   new : ∀ d ∈ L, keep d = true → quot d ≤ oldv d ∧ newv d = oldv d - quot d + pc
   oldb : ∀ d ∈ L, oldv d < 100000000000
-  quotb : ∀ d ∈ L, quot d < 2147483648
-  smb : ∀ i, i ≤ (v - 1) / 2 → Sm i < 200000
+  quotb : ∀ d ∈ L, quot d < 100000000000
+  smb : ∀ i, i ≤ (v - 1) / 2 → Sm i < 400000
   p3 : 3 ≤ p
 
 theorem compact_loop (L : List Nat) (keep : Nat → Bool) (oldv newv quot Sm Sk : Nat → Nat)
@@ -291,8 +291,10 @@ theorem compact_loop (L : List Nat) (keep : Nat → Bool) (oldv newv quot Sm Sk 
           have hSmr : readBytes mem (A + (N / (d * p) - 1) / 2 * 4) 4 =
               some (BitVec.ofNat 32 (quot d)) := by
             have := hSmA ((N / (d * p) - 1) / 2) (by omega); rwa [hq] at this
+          have hqb' : quot d < 2147483648 := by
+            rw [← hq]; have := hm.smb ((N / (d * p) - 1) / 2) (by omega); omega
           exact ⟨31, compact_keep_large x mem out A B Cb D N v p pc L.length k ns d (oldv d) (quot d)
-            hx hb hmem hsz h17 h16 hkL hnsk hd1.2 (by omega) hdpb hN1 hN2 hqo hob hqb hR hS hL hSmr⟩
+            hx hb hmem hsz h17 h16 hkL hnsk hd1.2 (by omega) hdpb hN1 hN2 hqo hob hqb' hR hS hL hSmr⟩
       rw [if_pos hkeep] at hfts
       have hw1 : Cb + ns * 8 + 8 ≤ mem.size := by omega
       have hw2 : B + ns * 4 + 4 ≤ (wr mem (Cb + ns * 8) (bv (newv d)) 8).size := by simp; omega

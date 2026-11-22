@@ -61,7 +61,7 @@ roots = ["CountingPrimesOddWheel", "CountingPrimesOddWheelMachine", "OddWheelSet
 [[lean_lib]]
 name = "GrumpyGordon"
 srcDir = "counting_primes/grumpygordon/lean"
-roots = ["GrumpyGordon", "GrumpyResidual", "GrumpyTables", "GrumpyOdd", "GrumpyBinary.Program", "GrumpyBinary.Attr", "GrumpyBinary.Exec", "GrumpyBinary.Arith", "GrumpyBinary.Tactic", "GrumpyBinary.Newton", "GrumpyBinary.SkipMath", "GrumpyBinary.Memset", "GrumpyBinary.Layout", "GrumpyBinary.Init", "GrumpyBinary.Compact", "GrumpyBinary.Update"]
+roots = ["GrumpyGordon", "GrumpyResidual", "GrumpyTables", "GrumpyOdd", "GrumpyBinary.Program", "GrumpyBinary.Attr", "GrumpyBinary.Exec", "GrumpyBinary.Arith", "GrumpyBinary.Tactic", "GrumpyBinary.Newton", "GrumpyBinary.SkipMath", "GrumpyBinary.Memset", "GrumpyBinary.Layout", "GrumpyBinary.Init", "GrumpyBinary.Compact", "GrumpyBinary.Update", "GrumpyBinary.RoundMath"]
 
 [[lean_lib]]
 name = "Urlh"
