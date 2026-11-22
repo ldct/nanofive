@@ -1,7 +1,7 @@
 name = "tinyfive"
 defaultTargets = ["TinyFive", "DecNumber", "CountingPrimes", "Abc101a", "CountingPrimesTrialDivision",
   "CountingPrimesSieve", "CountingPrimesWheel", "CountingPrimesOddSieve", "CountingPrimesLucy",
-  "CountingPrimesOddWheel", "GrumpyGordon", "Urlh", "TweetNaCl", "abc101a",
+  "CountingPrimesOddWheel", "GrumpyGordon", "Urlh", "TweetNaCl", "NaClSalsa20", "abc101a",
   "counting_primes_trial_division", "counting_primes_sieve", "counting_primes_wheel",
   "counting_primes_odd_sieve", "counting_primes_lucy", "counting_primes_odd_wheel",
   "counting_primes_grumpygordon"]
@@ -82,7 +82,18 @@ roots = ["TweetNaCl.ForHumans.Spec", "TweetNaCl.Verify32Program",
   "TweetNaCl.Salsa20WideIO", "TweetNaCl.Salsa20Replay",
   "TweetNaCl.Salsa20Slots", "TweetNaCl.Salsa20Circuit",
   "TweetNaCl.Salsa20Symbolic", "TweetNaCl.Salsa20Reference", "TweetNaCl.Salsa20RefCert",
-  "TweetNaCl.Salsa20Correct", "TweetNaCl.ForHumans.Salsa20Result"]
+  "TweetNaCl.Salsa20Correct", "TweetNaCl.ForHumans.Salsa20Result",
+  "TweetNaCl.Salsa20IOProgram", "TweetNaCl.ForHumans.Salsa20IOSpec", "TweetNaCl.Salsa20IO",
+  "TweetNaCl.ForHumans.Salsa20IOResult"]
+
+# NaCl 20110221's reference Salsa20 core, against the TweetNaCl Salsa20 specification.
+[[lean_lib]]
+name = "NaClSalsa20"
+srcDir = "nacl/lean"
+roots = ["NaClSalsa20.Program", "NaClSalsa20.Wire", "NaClSalsa20.WireSound",
+  "NaClSalsa20.Symbolic", "NaClSalsa20.SymbolicSound", "NaClSalsa20.Reference",
+  "NaClSalsa20.Call", "NaClSalsa20.IO", "NaClSalsa20.ForHumans.Salsa20Result",
+  "NaClSalsa20.ForHumans.Salsa20IOResult"]
 
 # Executable models, run by the projects' tests.
 [[lean_exe]]

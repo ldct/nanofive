@@ -30,7 +30,7 @@ That last claim concerns the model, not physical timing or other side channels.
 
 **Call assumptions.** Memory is 1 MiB, with output at `0x80000`, input at
 `0x80100`, key at `0x80200`, constant at `0x80300`, entry `sp = 0x100000`,
-and return PC `0x70000`. Argument registers point to those buffers, and the
+and return PC `0x11bc` (the instruction after the call in the program below). Argument registers point to those buffers, and the
 wrapper and helper bytes match `Salsa20Program.lean`. Other registers, output,
 stack, and unspecified memory may have arbitrary initial contents.
 
@@ -45,6 +45,22 @@ their soundness lemmas are kernel proofs. The emulator tests compare the
 linked words with the Lean image and run 13 independent reference cases
 at both the helper and wrapper entries. This does not verify HSalsa20
 or the variable-length stream wrapper.
+
+## Salsa20 as a program
+
+`lean/TweetNaCl/ForHumans/Salsa20IOResult.lean` proves `IsCorrect` from
+`ForHumans/Salsa20IOSpec.lean` for the machine `load 64 prog 0x100000 []`. Given the 16
+input, 32 key and 16 constant bytes on standard input (`ecall` 12), the machine prints the 64
+bytes of `Salsa20Spec.core` (`ecall` 11) and exits with code zero. One fuel bound, 12,090
+instructions, works for every input. The statement doesn't mention addresses, registers or
+calling conventions.
+
+`prog` in `Salsa20IOProgram.lean` is the linked helper and wrapper words at their linked
+addresses, a `j driver` at address 0, and a hand-assembled 33-instruction driver at `0x1170`.
+The driver reads the three buffers, calls `crypto_core_salsa20_tweet` with the fixture's
+ABI, and prints the output buffer. The proof composes the driver loops with
+`salsa20_correct`. The emulator test runs the same image on standard input for every Salsa20
+case.
 
 ## Comparison proof target
 

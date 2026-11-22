@@ -1,0 +1,21 @@
+Unmodified files from NaCl version 20110221 (D. J. Bernstein, Tanja Lange,
+Peter Schwabe; public domain).
+https://nacl.cr.yp.to/
+https://nacl.cr.yp.to/install.html
+https://hyperelliptic.org/nacl/nacl-20110221.tar.bz2
+
+SHA-256 of the release tarball:
+4f277f89735c8b0b8a6bbd043b3efb3fa1cc68a9a5da6a076507d067fc3b3bf8  nacl-20110221.tar.bz2
+
+Files taken from the tarball (paths relative to nacl-20110221/), SHA-256:
+0f4a489763955c9c86a9dd1bb438161b222325f07a1cf9487b3388aed2750887  crypto_core/salsa20/ref/core.c
+47b46db67d7caf57ac2552a374e2a83e458f80187ad6ca3b72686862031ed380  crypto_core/salsa20/ref/api.h
+d8f39ca48fa6e0cc76e15faffd470cea1f12162e19726f4a10b42df07c367b10  MACROS
+2ba816c4a8e29516348375202b91a74e406ff555307471575d905da0d824c76f  PROTOTYPES.c
+3ae9f0e49aff22c85888291282d6a3ac30cad567d5d854f2ee0140295aaffbf0  PROTOTYPES.cpp
+
+NaCl's `do` script generates the headers `crypto_core.h` and
+`crypto_core_salsa20.h` that core.c includes. ../headers.sh repeats the
+relevant part of `do` (SHA-256 of `do`:
+1e0aaf3039eb5810fbb8dc7de2f13c6dd996b38a2bffc78dcfd44170ab27c4fc)
+for o=crypto_core, p=salsa20, implementation crypto_core/salsa20/ref.

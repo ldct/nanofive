@@ -448,7 +448,7 @@ abbrev out : Nat := 0x80000
 abbrev inp : Nat := 0x80100
 abbrev key : Nat := 0x80200
 abbrev constant : Nat := 0x80300
-abbrev returnPC : Word := 0x70000
+abbrev returnPC : Word := 0x11bc
 abbrev steps : Nat := 11550
 
 /-- The wrapper's writable regions: 64 output bytes and the combined 528-byte stack frame. -/

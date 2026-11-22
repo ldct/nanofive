@@ -1,5 +1,7 @@
 """Build the RV64IM fixture, check its Lean code image, and run it in NanoFive."""
+import contextlib
 import hashlib
+import io
 import os
 from pathlib import Path
 import re
@@ -123,7 +125,38 @@ def test_salsa20(m, symbols):
       assert m.mem[out:out_end] == expected, f'{label}: output differs'
       assert m.mem[:out] == before[:out] and m.mem[out_end:stack_bottom] == before[out_end:], (
         f'{label}: wrote outside output and stack')
-  return len(cases)
+  return cases
+
+
+def lean_words(source, name):
+  words = re.search(rf'^def {name} : List \(BitVec 32\) :=\s*\[(.*?)\]', source, re.M | re.S)
+  assert words, f'missing Lean definition {name}'
+  literals = re.sub(r'--[^\n]*', '', words[1]).strip().removesuffix(',').split(',')
+  return [int(word.strip(), 0) for word in literals]
+
+
+def test_salsa20_io(cases):
+  """Run the stand-alone program of `Salsa20IOProgram.lean` on standard input."""
+  lean = HERE / 'lean/TweetNaCl'
+  core = (lean / 'Salsa20Program.lean').read_text()
+  driver = (lean / 'Salsa20IOProgram.lean').read_text()
+  prog = ([0x1700106f] + [0] * 11 + lean_words(core, 'coreWords') + [0] * 840 +
+          lean_words(core, 'wrapperWords') + lean_words(driver, 'driverWords'))
+  assert len(prog) == 1149 and 4 * prog.index(0x00100137) == 0x1170
+  for name, block_input, key, constant in cases:
+    m = machine64(mem_size=MEM_SIZE)
+    for i, word in enumerate(prog):
+      m.write_i32(word, 4 * i)
+    stdin, stdout = sys.stdin, io.StringIO()
+    sys.stdin = io.StringIO(''.join(map(chr, block_input + key + constant)))
+    try:
+      with contextlib.redirect_stdout(stdout):
+        m.run(0, steps=12_090)
+    finally:
+      sys.stdin = stdin
+    expected = ''.join(map(chr, salsa20_reference(block_input, key, constant)))
+    assert m.halted and m.exit_code == 0, f'Salsa20 program {name}: did not exit 0'
+    assert stdout.getvalue() == expected, f'Salsa20 program {name}: output differs'
 
 
 def main():
@@ -144,6 +177,7 @@ def main():
   source = (HERE / 'lean/TweetNaCl/Verify32Program.lean').read_text()
   verify = check_lean_image(m, symbols, source, 'crypto_verify_32_tweet', 'entry', 'prog')
   salsa_cases = test_salsa20(m, symbols)
+  test_salsa20_io(salsa_cases)
 
   left = bytes(range(32))
   cases = [(RIGHT, left), (LEFT, left)]
@@ -173,8 +207,8 @@ def main():
   run_call(m, keypair, [LEFT, RIGHT], 1000)
   assert m.halted and m.exit_code == 125, 'key generation must fail without entropy'
   print(f'TweetNaCl RV64IM: ELF and Lean code match; {len(cases)} verify and '
-        f'{len(messages)} SHA-512 cases passed; {salsa_cases} Salsa20 cases passed at '
-        'both entry points; key generation fails closed.')
+        f'{len(messages)} SHA-512 cases passed; {len(salsa_cases)} Salsa20 cases passed at '
+        'both entry points and as a program; key generation fails closed.')
 
 
 if __name__ == '__main__':
