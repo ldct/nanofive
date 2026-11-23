@@ -1,7 +1,7 @@
 name = "tinyfive"
 defaultTargets = ["TinyFive", "DecNumber", "CountingPrimes", "Abc101a", "CountingPrimesTrialDivision",
   "CountingPrimesSieve", "CountingPrimesWheel", "CountingPrimesOddSieve", "CountingPrimesLucy",
-  "CountingPrimesOddWheel", "GrumpyGordon", "Zjy2008", "Urlh", "TweetNaCl", "NaClSalsa20", "abc101a",
+  "CountingPrimesOddWheel", "GrumpyGordon", "Zjy2008", "Lpha", "Urlh", "TweetNaCl", "NaClSalsa20", "abc101a",
   "counting_primes_trial_division", "counting_primes_sieve", "counting_primes_wheel",
   "counting_primes_odd_sieve", "counting_primes_lucy", "counting_primes_odd_wheel",
   "counting_primes_grumpygordon"]
@@ -67,6 +67,11 @@ roots = ["GrumpyGordon", "GrumpyResidual", "GrumpyTables", "GrumpyOdd", "GrumpyB
 name = "Zjy2008"
 srcDir = "counting_primes/zjy2008/lean"
 roots = ["ZjyBinary.Program", "ZjyBinary.Exec", "ZjyBinary.Tactic", "ZjyBinary.Mark", "ZjyBinary.Compact", "ZjyBinary.Update", "ZjyBinary.Calc", "ZjyBinary.Finish", "ZjyBinary.FinishRun", "ZjyBinary.Wheel", "ZjyBinary.Memset", "ZjyBinary.Setup", "ZjyBinary.Correct"]
+
+[[lean_lib]]
+name = "Lpha"
+srcDir = "counting_primes/lpha/lean"
+roots = ["LphaBinary.Program", "LphaBinary.Exec", "LphaBinary.Tactic", "LphaBinary.Memset"]
 
 [[lean_lib]]
 name = "Urlh"
