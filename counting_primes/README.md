@@ -76,3 +76,12 @@ natural numbers. It also proves `IsCorrect` for an RV64IM recompile of the
 same `prime_pi` (1016 bytes of `programSize`, 2,988 instructions at N = 1,000).
 Unlike the table above, that proof uses existential fuel and has no explicit
 instruction budget.
+
+## zjy2008
+
+[`zjy2008/`](zjy2008/README.md) proves `IsCorrect` for an RV64IM recompile of
+zjy2008's `pi` (#346093), the fastest program in `prime_benchmark/` (1239 bytes
+of `programSize`, 3,138 instructions at N = 1,000). It is grumpygordon's
+algorithm with a mod-30 wheel over the sieving primes, so its machine proof
+refines to the same tables and reuses grumpygordon's algorithm proof. Like
+grumpygordon's, it uses existential fuel and has no explicit instruction budget.

@@ -1,7 +1,7 @@
 name = "tinyfive"
 defaultTargets = ["TinyFive", "DecNumber", "CountingPrimes", "Abc101a", "CountingPrimesTrialDivision",
   "CountingPrimesSieve", "CountingPrimesWheel", "CountingPrimesOddSieve", "CountingPrimesLucy",
-  "CountingPrimesOddWheel", "GrumpyGordon", "Urlh", "TweetNaCl", "NaClSalsa20", "abc101a",
+  "CountingPrimesOddWheel", "GrumpyGordon", "Zjy2008", "Urlh", "TweetNaCl", "NaClSalsa20", "abc101a",
   "counting_primes_trial_division", "counting_primes_sieve", "counting_primes_wheel",
   "counting_primes_odd_sieve", "counting_primes_lucy", "counting_primes_odd_wheel",
   "counting_primes_grumpygordon"]
@@ -62,6 +62,11 @@ roots = ["CountingPrimesOddWheel", "CountingPrimesOddWheelMachine", "OddWheelSet
 name = "GrumpyGordon"
 srcDir = "counting_primes/grumpygordon/lean"
 roots = ["GrumpyGordon", "GrumpyResidual", "GrumpyTables", "GrumpyOdd", "GrumpyBinary.Program", "GrumpyBinary.Attr", "GrumpyBinary.Exec", "GrumpyBinary.Arith", "GrumpyBinary.Tactic", "GrumpyBinary.Newton", "GrumpyBinary.SkipMath", "GrumpyBinary.Memset", "GrumpyBinary.Layout", "GrumpyBinary.Init", "GrumpyBinary.Compact", "GrumpyBinary.Update", "GrumpyBinary.RoundMath", "GrumpyBinary.Round", "GrumpyBinary.Outer", "GrumpyBinary.Finish", "GrumpyBinary.FinishMath", "GrumpyBinary.FinishRun", "GrumpyBinary.Setup", "GrumpyBinary.Correct"]
+
+[[lean_lib]]
+name = "Zjy2008"
+srcDir = "counting_primes/zjy2008/lean"
+roots = ["ZjyBinary.Program", "ZjyBinary.Exec", "ZjyBinary.Tactic", "ZjyBinary.Mark", "ZjyBinary.Compact", "ZjyBinary.Update", "ZjyBinary.Calc", "ZjyBinary.Finish", "ZjyBinary.FinishRun", "ZjyBinary.Wheel", "ZjyBinary.Memset", "ZjyBinary.Setup", "ZjyBinary.Correct"]
 
 [[lean_lib]]
 name = "Urlh"
