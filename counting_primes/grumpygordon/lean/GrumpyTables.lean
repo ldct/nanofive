@@ -40,9 +40,9 @@ theorem mem_rough {p v d : Nat} : d ∈ roughList p v ↔ p ≤ d ∧ d ≤ v �
   · rintro ⟨⟨h1,h2⟩,h3⟩; exact ⟨h1, by omega, h3⟩
   · rintro ⟨h1,h2,h3⟩; exact ⟨⟨h1, by omega⟩, h3⟩
 
-private theorem C_succ (p x : Nat) : C p (x+1) = C p x + if Alive p (x+1) then 1 else 0 := rfl
+theorem C_succ (p x : Nat) : C p (x+1) = C p x + if Alive p (x+1) then 1 else 0 := rfl
 
-private theorem interval_length (p len : Nat) (hp : 3 ≤ p) :
+theorem interval_length (p len : Nat) (hp : 3 ≤ p) :
     ((List.range' p len).filter (fun d => decide (Alive p d))).length + C p (p-1) = C p (p-1+len) := by
   induction len with
   | zero => simp
@@ -122,7 +122,7 @@ theorem init_valid (N : Nat) (hv : 1 ≤ isqrt N) : Valid N 3 (init N (isqrt N))
   exact pack_valid (by decide) hv (by decide) hk (fun x _ => (C_init x).symm)
     (fun d _ => (C_init (N/d)).symm)
 
-private theorem rough_next {p v : Nat} (hp : 3 ≤ p) (hpv : p ≤ v) :
+theorem rough_next {p v : Nat} (hp : 3 ≤ p) (hpv : p ≤ v) :
     roughList (p+1) v = (roughList p v).filter (fun d => d%p != 0) := by
   unfold roughList
   rw [show v+1-p = (v+1-(p+1))+1 by omega, List.range'_succ]
@@ -131,7 +131,7 @@ private theorem rough_next {p v : Nat} (hp : 3 ≤ p) (hpv : p ≤ v) :
     intro x hx <;> have hpx := (List.mem_range'_1.mp hx).1 <;>
     simp [Alive, marked_step p x (by omega), show p < x by omega, Nat.dvd_iff_mod_eq_zero] <;> grind
 
-private theorem rough_skip {p v : Nat} (hp : 3 ≤ p) (hpv : p ≤ v) (hn : ¬ Prime p) :
+theorem rough_skip {p v : Nat} (hp : 3 ≤ p) (hpv : p ≤ v) (hn : ¬ Prime p) :
     roughList (p+1) v = roughList p v := by
   unfold roughList
   rw [show v+1-p = (v+1-(p+1))+1 by omega, List.range'_succ]
@@ -152,7 +152,7 @@ def step (N v p : Nat) (t : Tables) : Tables :=
      let quotient := if e ≤ v then large t e else small t (N/e)
      large t d - (quotient - pc)
 
-private theorem update_eq (p x : Nat) (hp : 3 ≤ p) (hprime : Prime p) :
+theorem update_eq (p x : Nat) (hp : 3 ≤ p) (hprime : Prime p) :
     C p x - (C p (x/p) - C p (p-1)) = C (p+1) x := by
   by_cases hx : p ≤ x/p
   · have := C_prime_step p hprime hp x hx
@@ -163,7 +163,7 @@ private theorem update_eq (p x : Nat) (hp : 3 ≤ p) (hprime : Prime p) :
 
 /-- On a surviving denominator `d`, `d*p` is an *old* rough denominator.
 This justifies the large/large read in the compaction loop. -/
-private theorem product_rough {p v d : Nat} (hp : 3 ≤ p) (hprime : Prime p)
+theorem product_rough {p v d : Nat} (hp : 3 ≤ p) (hprime : Prime p)
     (hd : d ∈ 1 :: roughList (p+1) v) (he : d*p ≤ v) : d*p ∈ roughList p v := by
   apply mem_rough.mpr
   rcases List.mem_cons.mp hd with rfl | h

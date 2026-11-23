@@ -68,10 +68,11 @@ defined in `Machine`.
 programs on a common input; the instruction counts above come from there,
 except those of `odd_sieve/`, `lucy/`, and `odd_wheel/`, which their own tests measure.
 
-## Separate algorithm-level proof
+## grumpygordon
 
 [`grumpygordon/`](grumpygordon/README.md) verifies an executable Lean model
-of the #50137 rough-number counter used in `prime_benchmark/`. Its theorem
-covers all natural numbers, including `10^11`. It proves the compact-table
-sieve through the fourth root and the remaining semiprime/triple correction;
-it is **not** a seventh loaded-machine proof.
+of the #50137 rough-number counter used in `prime_benchmark/`, for all
+natural numbers. It also proves `IsCorrect` for an RV64IM recompile of the
+same `prime_pi` (1016 bytes of `programSize`, 2,988 instructions at N = 1,000).
+Unlike the table above, that proof uses existential fuel and has no explicit
+instruction budget.

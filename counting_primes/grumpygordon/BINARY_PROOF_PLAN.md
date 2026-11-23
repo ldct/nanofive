@@ -1,5 +1,10 @@
 # Verifying the grumpygordon RV32IM binary
 
+> **Status:** this plan was adapted to an RV64IM recompile of the same
+> `prime_pi` (`build.sh`, `src/grumpygordon.cpp`), and that proof is complete:
+> see `lean/GrumpyBinary/Correct.lean` and the [README](README.md). The
+> unchanged RV32IM port below is not verified.
+
 ## Target and acceptance criterion
 
 Verify the **unchanged local RV32IM port** in
