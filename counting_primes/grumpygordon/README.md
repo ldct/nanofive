@@ -75,8 +75,8 @@ this frozen-table formula without assuming the result of the prime count.
 | `GrumpyResidual` | Stable entries below `a²`, telescoping identity, correctness of the two residual sums. |
 | `GrumpyGordon` | Exact cutoff rough list, terminating odd-stage loop, unconditional `correct`. |
 
-The theorem concerns **Lean code over natural numbers**, not C++ semantics
-or a binary. The model uses exact integer division and a verified integer
+`correct` concerns **Lean code over natural numbers**, not C++ semantics
+or a binary (see the RV64IM machine proof below). The model uses exact integer division and a verified integer
 square root. It rebuilds tables from snapshots rather than proving in-place
 compaction/update order. Divisibility filtering and a small-table prime test
 replace the skip bitmap; the two final sums are regrouped as above, not a
@@ -93,5 +93,50 @@ large values through `π(10¹¹)`, and spot-checks the local RV32 port. The
 large cases do not allocate a sieve of size `10¹¹`; the proof does not depend
 on any of the test outputs.
 
-See [the binary verification plan](BINARY_PROOF_PLAN.md) for the next step:
-refining the existing RV32IM image to this algorithm.
+## RV64IM machine proof
+
+`lean/GrumpyBinary/` proves that a recompiled RV64IM image of `prime_pi`
+meets the same specification as the other prime counters:
+
+```lean
+TinyFive.GrumpyBinary.isCorrect : CountingPrimes.IsCorrect GrumpyBinary.initial'
+TinyFive.GrumpyBinary.programSize_eq : programSize GrumpyBinary.initial' = 1016
+```
+
+That is, for every `n < 10^11`, the loaded machine (4 MiB of memory, input
+`toString n ++ "\n"`, starting at PC 0) exits with code zero after printing
+`π(n)` and a newline. The fuel is existential: there is one fuel value that works
+for every input, but no explicit instruction budget is proved. The image is
+1248 bytes, with 1236 bytes of code and a 12-byte data table.
+
+`src/grumpygordon.cpp` is the C++ of `prime_pi` as ported in
+`prime_benchmark/`, in 64-bit integers. `build.sh` compiles it with
+`riscv64-linux-gnu-g++ -Os -march=rv64im` and links it with `start.S`.
+`gen_lean.py` then writes `lean/GrumpyBinary/Program.lean` and
+`counting_primes_grumpygordon_rv64.py`. The proof is about the instruction words in
+`Program.lean`, not about the compiler. It refines the machine states to
+`GrumpyGordon`'s rough list, tables and sums, so it reuses the algorithm proof
+above instead of proving primality again.
+
+| Module | What it proves |
+|---|---|
+| `Program`, `Exec`, `Attr`, `Tactic`, `Arith` | The image, instruction fetch, stores, and the `gexec` symbolic executor |
+| `Layout`, `Memset`, `Newton`, `Init` | Arrays in memory, `memset` and the vector constructor, the integer square root, and the table-filling loops |
+| `Setup` | Entry, parsing, the small cases `N ≤ 2`, and the stage-3 invariant at the outer loop |
+| `SkipMath`, `Compact`, `RoundMath`, `Update`, `Round` | One sieve round: the skip bitmap, compacting `roughs` and `larges`, and the `smalls` update |
+| `Outer` | The outer loop, up to the stage `a` with `N < a⁴` |
+| `Finish`, `FinishMath`, `FinishRun` | The final sums, the triple correction, and printing the count |
+| `Correct` | `isCorrect` and `programSize_eq` |
+
+`#print axioms` lists only `propext`, `Classical.choice`, and `Quot.sound` for
+both theorems. The machine runs 2,988 instructions at N = 1,000, 170,152 at
+N = 10⁶, and 12,864,819 at N = 10⁹ (measured, not proved).
+
+`python3 counting_primes/grumpygordon/counting_primes_grumpygordon_rv64_test.py` checks that the
+Lean and Python images are the same words. It also compares the machine with a sieve on 2,175 inputs up to
+2×10⁶, including neighbours of squares, cubes and fourth powers, and checks
+`π(10⁷)`, `π(10⁸)` and `π(10⁹)`.
+
+[The binary verification plan](BINARY_PROOF_PLAN.md) was written for the
+unchanged RV32IM port. It was adapted to this RV64IM recompile, where every value up to
+`10^11` fits in one register.

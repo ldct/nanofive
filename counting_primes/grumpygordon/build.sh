@@ -1,8 +1,8 @@
 #!/bin/sh
 # Compile src/grumpygordon.cpp (grumpygordon's prime_pi, as ported in
 # prime_benchmark/counting_primes_grumpygordon.py) for RV64IM and link it with
-# start.S. Then run gen_lean.py to refresh lean/GrumpyProgram.lean and
-# grumpy_rv64_words.py.
+# start.S. Then run gen_lean.py to refresh lean/GrumpyBinary/Program.lean and
+# counting_primes_grumpygordon_rv64.py.
 set -eu
 here=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 build="$here/build"

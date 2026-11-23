@@ -1,4 +1,4 @@
-"""Write lean/GrumpyProgram.lean and counting_primes_grumpygordon_rv64.py from build/grumpygordon.elf.
+"""Write lean/GrumpyBinary/Program.lean and counting_primes_grumpygordon_rv64.py from build/grumpygordon.elf.
 
 The image is every loaded byte from address 0 to `_end`: `.text` (start.S, memset, isqrt,
 prime_pi and the vector constructor) and `.data` (the 8-byte heap cursor, initially `_end`).
