@@ -71,7 +71,7 @@ roots = ["ZjyBinary.Program", "ZjyBinary.Exec", "ZjyBinary.Tactic", "ZjyBinary.M
 [[lean_lib]]
 name = "Lpha"
 srcDir = "counting_primes/lpha/lean"
-roots = ["LphaBinary.Program", "LphaBinary.Exec", "LphaBinary.Tactic", "LphaBinary.Memset"]
+roots = ["LphaBinary.Program", "LphaBinary.Exec", "LphaBinary.Tactic", "LphaBinary.Memset", "LphaBinary.Setup", "LphaBinary.Mark", "LphaBinary.Compact", "LphaBinary.Update", "LphaBinary.Bertrand", "LphaBinary.Round", "LphaBinary.PiBound", "LphaBinary.NoWrap", "LphaBinary.Finish", "LphaBinary.Correct"]
 
 [[lean_lib]]
 name = "Urlh"

@@ -5,6 +5,7 @@ import CountingPrimesOddSieve
 import CountingPrimesLucy
 import GrumpyBinary.Correct
 import ZjyBinary.Correct
+import LphaBinary.Correct
 
 /-!
 # Counting primes: correctness results
@@ -44,5 +45,9 @@ example : programSize GrumpyBinary.initial' = 1016 :=
 example : IsCorrect ZjyBinary.initial' := ZjyBinary.isCorrect
 example : programSize ZjyBinary.initial' = 1239 :=
   ZjyBinary.programSize_eq
+
+example : IsCorrect LphaBinary.initial' := LphaBinary.isCorrect
+example : programSize LphaBinary.initial' = 1353 :=
+  LphaBinary.programSize_eq
 
 end TinyFive.CountingPrimes

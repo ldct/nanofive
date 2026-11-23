@@ -85,3 +85,14 @@ of `programSize`, 3,138 instructions at N = 1,000). It is grumpygordon's
 algorithm with a mod-30 wheel over the sieving primes, so its machine proof
 refines to the same tables and reuses grumpygordon's algorithm proof. Like
 grumpygordon's, it uses existential fuel and has no explicit instruction budget.
+
+## lpha
+
+[`lpha/`](lpha/README.md) proves `IsCorrect` for an RV64IM recompile of
+lpha's `prime_count` (#195894, ported in `prime_benchmark/counting_primes_lpha.py`;
+1353 bytes of `programSize`). It is the same rough-number algorithm with
+`uint32_t` tables and a `uint32_t` result, so its proof also shows that the
+32-bit arithmetic never goes wrong: `π(n) < 2^32` for `n < 10^11`, and the
+zero-extended `k2_max` never wraps. The first fact is the one place a proof in
+this directory uses `native_decide` (see the lpha README). Like grumpygordon's,
+it uses existential fuel and has no explicit instruction budget.
