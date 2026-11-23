@@ -2,7 +2,7 @@
 
 Run: python3 counting_primes/lpha/counting_primes_lpha_rv64_test.py
 Checks that the Lean proof is about the same instruction words as the Python program,
-then compares the machine's output with a plain sieve (small inputs, and the neighbours of
+then compares the machine's output with a plain sieve (inputs up to 100, and the neighbours of
 squares, cubes and fourth powers, where the tables and the sieve cutoff change), checks the
 exit code and that the code is never overwritten, and checks known values of pi(10^k).
 The proof does not depend on any of these outputs.
@@ -62,7 +62,9 @@ def main():
     counts = prime_counts(SIEVE_LIMIT)
     powers = [k**e + d for k in range(2, 40) for e in (2, 3, 4) for d in (-1, 0, 1)
               if k**e + d <= SIEVE_LIMIT]
-    cases = sorted(set(range(2001)) | set(powers) | {10**5, 10**6, SIEVE_LIMIT})
+    # every run clears the 316 KB smooth[] table (about 1.3 million instructions), so fewer small
+    # inputs than the other tests
+    cases = sorted(set(range(101)) | set(powers) | {10**5, 10**6, SIEVE_LIMIT})
     for n in cases:
         assert run_machine(n) == f"{counts[n]}\n", f"wrong count for N={n}"
     print(f"count, exit code and code isolation: PASS ({len(cases)} cases)", flush=True)

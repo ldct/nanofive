@@ -76,7 +76,8 @@ clear `smooth`.
 
 `python3 counting_primes/lpha/counting_primes_lpha_rv64_test.py` checks that
 the Lean and Python images are the same words. It also compares the machine
-with a sieve on 2,175 inputs up to 2×10⁶, including neighbours of squares,
-cubes and fourth powers, checks that the code is never overwritten, and checks
+with a sieve on 384 inputs up to 2×10⁶ (every input up to 100, and the
+neighbours of squares, cubes and fourth powers; each run clears `smooth`, so
+it uses fewer inputs than the other tests and takes about 16 minutes), checks that the code is never overwritten, and checks
 `π(10⁷)`, `π(10⁸)` and `π(10⁹)`. The proof does not depend on any of these
 outputs.
