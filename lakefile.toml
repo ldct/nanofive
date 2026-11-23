@@ -84,7 +84,11 @@ roots = ["TweetNaCl.ForHumans.Spec", "TweetNaCl.Verify32Program",
   "TweetNaCl.Salsa20Symbolic", "TweetNaCl.Salsa20Reference", "TweetNaCl.Salsa20RefCert",
   "TweetNaCl.Salsa20Correct", "TweetNaCl.ForHumans.Salsa20Result",
   "TweetNaCl.Salsa20IOProgram", "TweetNaCl.ForHumans.Salsa20IOSpec", "TweetNaCl.Salsa20IO",
-  "TweetNaCl.ForHumans.Salsa20IOResult"]
+  "TweetNaCl.ForHumans.Salsa20IOResult", "TweetNaCl.ForHumans.HSalsa20Spec",
+  "TweetNaCl.HSalsa20Program", "TweetNaCl.HSalsa20Replay", "TweetNaCl.HSalsa20Reference",
+  "TweetNaCl.HSalsa20Correct", "TweetNaCl.ForHumans.HSalsa20Result",
+  "TweetNaCl.HSalsa20IOProgram", "TweetNaCl.ForHumans.HSalsa20IOSpec", "TweetNaCl.HSalsa20IO",
+  "TweetNaCl.ForHumans.HSalsa20IOResult"]
 
 # NaCl 20110221's reference Salsa20 core, against the TweetNaCl Salsa20 specification.
 [[lean_lib]]

@@ -17,7 +17,7 @@ abbrev Frame := DecNumber.Replay.Frame
 /-- The concrete value need only match if the checker knows it. -/
 def Known {α : Type} (a : Option α) (v : α) : Prop := ∀ k, a = some k → v = k
 
-private theorem known_some {v : α} : Known (some v) v := by simp [Known]
+theorem known_some {v : α} : Known (some v) v := by simp [Known]
 
 private theorem Known.map {a : Option α} {v : α} {f : α → β} (h : Known a v) :
     Known (a.map f) (f v) := by
@@ -39,11 +39,11 @@ def Agrees (bytes : KnownBytes) (mem : Array Byte) : Prop :=
 def read (bytes : KnownBytes) (addr n : Nat) : Option (BitVec (8 * n)) :=
   DecNumber.Replay.read (fun a => bytes[a]?) addr n
 
-private def put (bytes : KnownBytes) (addr : Nat) : Option Byte → KnownBytes
+def put (bytes : KnownBytes) (addr : Nat) : Option Byte → KnownBytes
   | some b => bytes.insert addr b
   | none => bytes.erase addr
 
-private theorem lookup_put (bytes : KnownBytes) (addr i : Nat) (v : Option Byte) :
+theorem lookup_put (bytes : KnownBytes) (addr i : Nat) (v : Option Byte) :
     (put bytes addr v)[i]? = if addr = i then v else bytes[i]? := by
   cases v <;> simp [put, Std.TreeMap.getElem?_insert, Std.TreeMap.getElem?_erase]
 

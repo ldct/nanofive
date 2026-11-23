@@ -128,6 +128,51 @@ def test_salsa20(m, symbols):
   return cases
 
 
+def hsalsa20_reference(block_input, key, constant):
+  """HSalsa20: the Salsa20 rounds without feed-forward, then words 0, 5, 10, 15, 6-9."""
+  state = salsa20_reference(block_input, key, constant)
+  words = struct.unpack('<16I', state)
+  initial = struct.unpack('<16I', constant[:4] + key[:16] + constant[4:8] + block_input +
+                          constant[8:12] + key[16:] + constant[12:])
+  mixed = [(word - start) & 0xffffffff for word, start in zip(words, initial)]
+  return struct.pack('<8I', *(mixed[i] for i in (0, 5, 10, 15, 6, 7, 8, 9)))
+
+
+def test_hsalsa20(m, symbols, cases):
+  """Run `crypto_core_hsalsa20_tweet` under the assumptions of `hsalsa20_correct`."""
+  source = (HERE / 'lean/TweetNaCl/HSalsa20Program.lean').read_text()
+  wrapper = check_lean_image(m, symbols, source, 'crypto_core_hsalsa20_tweet',
+                             'entry', 'wrapperWords')
+  sigma = b'expand 32-byte k'
+  # NaCl tests/core1.c and core2.c: the subkeys of crypto_box's example.
+  shared = bytes.fromhex('4a5d9d5ba4ce2de1728e3bf480350f25e07e21c947d19e3376f09b3c1e161742')
+  first = bytes.fromhex('1b27556473e985d462cd51197a9a46c76009549eac6474f206c4ee0844f68389')
+  nonce = bytes.fromhex('69696ee955b62b73cd62bda875fc73d6')
+  second = bytes.fromhex('dc908dda0b9344a953629b733820778880f3ceb421bb61b91cbd4c3e66256ce4')
+  assert hsalsa20_reference(bytes(16), shared, sigma) == first, 'HSalsa20 reference fails core1'
+  assert hsalsa20_reference(nonce, first, sigma) == second, 'HSalsa20 reference fails core2'
+  cases = [('core1', bytes(16), shared, sigma), ('core2', nonce, first, sigma), *cases]
+  for name, block_input, key, constant in cases:
+    expected = hsalsa20_reference(block_input, key, constant)
+    label = f'HSalsa20 {name}'
+    m, _ = fresh()
+    out, inp, key_addr, const_addr = LEFT, RIGHT, 0x80200, 0x80300
+    for addr, data in ((inp, block_input), (key_addr, key), (const_addr, constant)):
+      m.mem[addr:addr + len(data)] = data
+    out_end = out + len(expected)
+    m.mem[out:out_end] = bytes(b ^ 0xff for b in expected)
+    stack_bottom = MEM_SIZE - 528
+    before = bytes(m.mem[:stack_bottom])
+    m.x[14] = 0  # The wrapper must supply h=1 itself.
+    run_call(m, wrapper, [out, inp, key_addr, const_addr], 11_514)
+    assert not m.halted and m.pc == RETURN and m.x[2] == MEM_SIZE, f'{label}: bad return'
+    assert m.x[10] == 0, f'{label}: wrapper returned nonzero'
+    assert m.mem[out:out_end] == expected, f'{label}: output differs'
+    assert m.mem[:out] == before[:out] and m.mem[out_end:stack_bottom] == before[out_end:], (
+      f'{label}: wrote outside output and stack')
+  return cases
+
+
 def lean_words(source, name):
   words = re.search(rf'^def {name} : List \(BitVec 32\) :=\s*\[(.*?)\]', source, re.M | re.S)
   assert words, f'missing Lean definition {name}'
@@ -159,6 +204,31 @@ def test_salsa20_io(cases):
     assert stdout.getvalue() == expected, f'Salsa20 program {name}: output differs'
 
 
+def test_hsalsa20_io(cases):
+  """Run the stand-alone program of `HSalsa20IOProgram.lean` on standard input."""
+  lean = HERE / 'lean/TweetNaCl'
+  core = (lean / 'Salsa20Program.lean').read_text()
+  wrapper = (lean / 'HSalsa20Program.lean').read_text()
+  driver = (lean / 'HSalsa20IOProgram.lean').read_text()
+  prog = ([0x1940106f] + [0] * 11 + lean_words(core, 'coreWords') + [0] * 849 +
+          lean_words(wrapper, 'wrapperWords') + lean_words(driver, 'driverWords'))
+  assert len(prog) == 1158 and 4 * prog.index(0x00100137) == 0x1194
+  for name, block_input, key, constant in cases:
+    m = machine64(mem_size=MEM_SIZE)
+    for i, word in enumerate(prog):
+      m.write_i32(word, 4 * i)
+    stdin, stdout = sys.stdin, io.StringIO()
+    sys.stdin = io.StringIO(''.join(map(chr, block_input + key + constant)))
+    try:
+      with contextlib.redirect_stdout(stdout):
+        m.run(0, steps=11_926)
+    finally:
+      sys.stdin = stdin
+    expected = ''.join(map(chr, hsalsa20_reference(block_input, key, constant)))
+    assert m.halted and m.exit_code == 0, f'HSalsa20 program {name}: did not exit 0'
+    assert stdout.getvalue() == expected, f'HSalsa20 program {name}: output differs'
+
+
 def main():
   subprocess.run([HERE / 'build.sh'], check=True)
   tool = os.environ.get('CROSS_COMPILE') or 'riscv64-unknown-elf-'
@@ -178,6 +248,8 @@ def main():
   verify = check_lean_image(m, symbols, source, 'crypto_verify_32_tweet', 'entry', 'prog')
   salsa_cases = test_salsa20(m, symbols)
   test_salsa20_io(salsa_cases)
+  hsalsa_cases = test_hsalsa20(m, symbols, salsa_cases)
+  test_hsalsa20_io(hsalsa_cases)
 
   left = bytes(range(32))
   cases = [(RIGHT, left), (LEFT, left)]
@@ -208,7 +280,8 @@ def main():
   assert m.halted and m.exit_code == 125, 'key generation must fail without entropy'
   print(f'TweetNaCl RV64IM: ELF and Lean code match; {len(cases)} verify and '
         f'{len(messages)} SHA-512 cases passed; {len(salsa_cases)} Salsa20 cases passed at '
-        'both entry points and as a program; key generation fails closed.')
+        f'both entry points and as a program; {len(hsalsa_cases)} HSalsa20 cases passed as a '
+        'call and as a program; key generation fails closed.')
 
 
 if __name__ == '__main__':

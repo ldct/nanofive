@@ -43,8 +43,8 @@ loop's transposed column layout implements a double round every two
 iterations. The closed binary certificates use Lean's `native_decide`;
 their soundness lemmas are kernel proofs. The emulator tests compare the
 linked words with the Lean image and run 13 independent reference cases
-at both the helper and wrapper entries. This does not verify HSalsa20
-or the variable-length stream wrapper.
+at both the helper and wrapper entries. HSalsa20 is proved below; the
+variable-length stream wrapper is not verified.
 
 ## Salsa20 as a program
 
@@ -61,6 +61,31 @@ The driver reads the three buffers, calls `crypto_core_salsa20_tweet` with the f
 ABI, and prints the output buffer. The proof composes the driver loops with
 `salsa20_correct`. The emulator test runs the same image on standard input for every Salsa20
 case.
+
+## HSalsa20 binary proof
+
+`lean/TweetNaCl/ForHumans/HSalsa20Spec.lean` models HSalsa20 (Bernstein, *Extending the
+Salsa20 nonce*, §2): the Salsa20 state of `Salsa20Spec`, the twenty-round permutation without
+feed-forward, and words 0, 5, 10, 15, 6, 7, 8, 9 of the result. It checks NaCl's `core1` and
+`core2` test vectors by `decide`.
+
+`ForHumans/HSalsa20Result.lean` states `hsalsa20_correct`, with the call assumptions of the
+Salsa20 proof and return PC `0x11e0`. The linked `crypto_core_hsalsa20_tweet` writes exactly the
+32 bytes of `hsalsa20` and returns zero after 11,514 model instructions. It restores `sp` and
+`ra`, changes no memory outside the 32-byte output and 528-byte stack frame, and follows one
+instruction, branch and data-address trace for all inputs.
+
+The proof reuses the Salsa20 machinery: `HSalsa20Replay` checks the schedule from the wrapper,
+in which `core` takes its `h = 1` branch, and `HSalsa20Correct` compares the circuit of that
+schedule with `HSalsa20Reference.hcore`. That branch still adds the initial state, then
+subtracts the constant and input words again, reloaded from memory; `hcore` does the same, and
+`hcore_concrete_eq_hsalsa20` shows that the added and subtracted words cancel exactly.
+
+`ForHumans/HSalsa20IOResult.lean` proves `IsCorrect` from `ForHumans/HSalsa20IOSpec.lean` for
+the machine `load 64 prog 0x100000 []` of `HSalsa20IOProgram.lean`: given input, key and
+constant on standard input, it prints the 32 bytes of `hsalsa20` and exits with code zero,
+within 11,926 instructions. The driver is the Salsa20 driver, placed after the HSalsa20
+wrapper at `0x1194` and printing 32 bytes.
 
 ## Comparison proof target
 

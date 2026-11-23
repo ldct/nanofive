@@ -15,13 +15,13 @@ def algebra (a : Arena) : Ops (Option Value) where
 def ref (a : Arena) (inp key constant : Nat) : Vector (Option Value) 64 :=
   core (algebra a) (readArg a.mk) inp key constant
 
-private def input (env : Leaves) (addr : Nat) : Word :=
+def input (env : Leaves) (addr : Nat) : Word :=
   (env.argByte addr).setWidth 64
 
-private abbrev Paired (a : Arena) (env : Leaves) :=
+abbrev Paired (a : Arena) (env : Leaves) :=
   {p : Option Value × Word // ∀ v, p.1 = some v → v.eval a env = p.2}
 
-private def unary (x : Paired a env) (sym : Value → Option Value) (con : Word → Word)
+def unary (x : Paired a env) (sym : Value → Option Value) (con : Word → Word)
     (sound : ∀ v r, sym v = some r → r.eval a env = con (v.eval a env)) :
     Paired a env :=
   ⟨(x.1.1.bind sym, con x.1.2), by
@@ -29,7 +29,7 @@ private def unary (x : Paired a env) (sym : Value → Option Value) (con : Word 
     obtain ⟨v, hv, hr⟩ := Option.bind_eq_some_iff.mp h
     rw [sound v r hr, x.2 v hv]⟩
 
-private def binary (x y : Paired a env) (sym : Value → Value → Option Value)
+def binary (x y : Paired a env) (sym : Value → Value → Option Value)
     (con : Word → Word → Word)
     (sound : ∀ v w r, sym v w = some r → r.eval a env = con (v.eval a env) (w.eval a env)) :
     Paired a env :=
@@ -39,7 +39,7 @@ private def binary (x y : Paired a env) (sym : Value → Value → Option Value)
     obtain ⟨w, hw, hr⟩ := Option.bind_eq_some_iff.mp h'
     rw [sound v w r hr, x.2 v hv, y.2 w hw]⟩
 
-private def pairOps (a : Arena) (env : Leaves) : Ops (Paired a env) where
+def pairOps (a : Arena) (env : Leaves) : Ops (Paired a env) where
   literal x := ⟨(some (.literal x), x), fun v h => by cases h; rfl⟩
   alu op x y :=
     binary x y (Salsa20Symbolic.apply a.mk false op) (concreteOps.alu op)
@@ -49,21 +49,21 @@ private def pairOps (a : Arena) (env : Leaves) : Ops (Paired a env) where
       (fun _ _ _ h => apply_sound env h)
   byte x := unary x (trunc a.mk) concreteOps.byte (fun _ _ h => trunc_sound env h)
 
-private def pairInput (a : Arena) (env : Leaves) (addr : Nat) : Paired a env :=
+def pairInput (a : Arena) (env : Leaves) (addr : Nat) : Paired a env :=
   ⟨(readArg a.mk addr, input env addr), by
     intro v h
     simp only [readArg, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
     obtain ⟨i, hi, rfl⟩ := h
     exact a.mk_sound env hi⟩
 
-private def symbolicProjection (a : Arena) (env : Leaves) : Hom (pairOps a env) (algebra a) where
+def symbolicProjection (a : Arena) (env : Leaves) : Hom (pairOps a env) (algebra a) where
   toFun p := p.1.1
   literal _ := rfl
   alu _ _ _ := rfl
   aluWord _ _ _ := rfl
   byte _ := rfl
 
-private def concreteProjection (a : Arena) (env : Leaves) : Hom (pairOps a env) concreteOps where
+def concreteProjection (a : Arena) (env : Leaves) : Hom (pairOps a env) concreteOps where
   toFun p := p.1.2
   literal _ := rfl
   alu _ _ _ := rfl
