@@ -66,7 +66,7 @@ roots = ["GrumpyGordon", "GrumpyResidual", "GrumpyTables", "GrumpyOdd", "GrumpyB
 [[lean_lib]]
 name = "Zjy2008"
 srcDir = "counting_primes/zjy2008/lean"
-roots = ["ZjyBinary.Program", "ZjyBinary.Exec", "ZjyBinary.Tactic", "ZjyBinary.Mark", "ZjyBinary.Compact", "ZjyBinary.Update", "ZjyBinary.Calc"]
+roots = ["ZjyBinary.Program", "ZjyBinary.Exec", "ZjyBinary.Tactic", "ZjyBinary.Mark", "ZjyBinary.Compact", "ZjyBinary.Update", "ZjyBinary.Calc", "ZjyBinary.Finish", "ZjyBinary.FinishRun", "ZjyBinary.Wheel", "ZjyBinary.Memset", "ZjyBinary.Setup", "ZjyBinary.Correct"]
 
 [[lean_lib]]
 name = "Urlh"

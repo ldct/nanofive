@@ -28,6 +28,7 @@ structure ZMem (N p : Nat) (mem : Array (BitVec 8)) : Prop where
   hpr : ∀ r, 3 ≤ r → r < p → Prime r → r * r * (r * r) ≤ N
   size : mem.size = 4194304
   pre : Prefix image mem 1480
+  wh : Prefix image mem 1512
   ra : readBytes mem 4194296 8 = some (bv 8)
   sl : Slots mem N (isqrt N) (C p (p - 1)) (RL N p).length 1520 (ZB ((isqrt N + 1) / 2))
     (ZD ((isqrt N + 1) / 2)) (ZC ((isqrt N + 1) / 2) (isqrt N))
@@ -36,6 +37,10 @@ structure ZMem (N p : Nat) (mem : Array (BitVec 8)) : Prop where
   la : Arr64 mem (ZC ((isqrt N + 1) / 2) (isqrt N)) (RL N p).length
     (fun k => C p (N / (RL N p).getD k 0))
   sk : Arr8 mem (ZD ((isqrt N + 1) / 2)) (isqrt N + 1) (fun i => if SkipMarked p i then 1 else 0)
+
+theorem _root_.TinyFive.GrumpyBinary.Same.pfx {mem mem' : Array (BitVec 8)} {lo hi n : Nat}
+    (h : Same mem mem' lo hi) (hp : Prefix image mem n) (hlo : n ≤ lo) : Prefix image mem' n :=
+  fun i hi => by rw [h.frame i (by omega)]; exact hp i hi
 
 theorem zmem_bounds {N p : Nat} {mem : Array (BitVec 8)} (h : ZMem N p mem) :
     isqrt N < 316228 ∧ ZC ((isqrt N + 1) / 2) (isqrt N) + (isqrt N + 1) / 2 * 8 ≤ 4194000 := by
@@ -267,6 +272,8 @@ theorem calc_prime (N p : Nat) (x : Regs 64) (mem : Array (BitVec 8)) (out : Str
     hy7_8, hy7_2, ?_⟩
   · rw [run_add, hr1, run_add, hr2, run_add, hr3, run_add, hr4, run_add, hr5, run_add, hr6, hr7]
   · refine ⟨h.hN7, h.hN, by omega, by omega, ?_, by simp [hsz6], prefix_wr _ _ _ hpre6 hw7 (by omega),
+      hS7.pfx (hsame6.pfx (hS5.pfx (hsame4.pfx (hSb.pfx (hSa.pfx h.wh (by omega)) (by omega)) (by omega))
+        (by omega)) (by omega)) (by omega),
       tr (hsame4.read (hSb.read (hSa.read h.ra (by omega)) (by omega)) (by omega)) (by omega) (by omega),
       ?_, ?_, ?_, ?_, ?_⟩
     · intro r h3 hr hpr
