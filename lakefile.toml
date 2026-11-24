@@ -97,14 +97,18 @@ srcDir = "nacl/lean"
 roots = ["NaClSalsa20.Program", "NaClSalsa20.Wire", "NaClSalsa20.WireSound",
   "NaClSalsa20.Symbolic", "NaClSalsa20.SymbolicSound", "NaClSalsa20.Reference",
   "NaClSalsa20.Call", "NaClSalsa20.IO", "NaClSalsa20.ForHumans.Salsa20Result",
-  "NaClSalsa20.ForHumans.Salsa20IOResult"]
+  "NaClSalsa20.ForHumans.Salsa20IOResult", "NaClSalsa20.HSalsa20Reference",
+  "NaClSalsa20.HSalsa20Program", "NaClSalsa20.HSalsa20Call", "NaClSalsa20.HSalsa20IO",
+  "NaClSalsa20.ForHumans.HSalsa20Result", "NaClSalsa20.ForHumans.HSalsa20IOResult"]
 
 # libsodium 1.0.22's reference Salsa20 core, with the proof machinery of NaClSalsa20.
 [[lean_lib]]
 name = "LibsodiumSalsa20"
 srcDir = "libsodium/lean"
 roots = ["LibsodiumSalsa20.Program", "LibsodiumSalsa20.Call", "LibsodiumSalsa20.IO",
-  "LibsodiumSalsa20.ForHumans.Salsa20Result", "LibsodiumSalsa20.ForHumans.Salsa20IOResult"]
+  "LibsodiumSalsa20.ForHumans.Salsa20Result", "LibsodiumSalsa20.ForHumans.Salsa20IOResult",
+  "LibsodiumSalsa20.HSalsa20Program", "LibsodiumSalsa20.HSalsa20Call", "LibsodiumSalsa20.HSalsa20IO",
+  "LibsodiumSalsa20.ForHumans.HSalsa20Result", "LibsodiumSalsa20.ForHumans.HSalsa20IOResult"]
 
 # Nettle 3.10.2's _nettle_salsa20_core, with the proof machinery of NaClSalsa20.
 [[lean_lib]]

@@ -13,9 +13,11 @@ Files taken from the tarball (paths relative to nacl-20110221/), SHA-256:
 d8f39ca48fa6e0cc76e15faffd470cea1f12162e19726f4a10b42df07c367b10  MACROS
 2ba816c4a8e29516348375202b91a74e406ff555307471575d905da0d824c76f  PROTOTYPES.c
 3ae9f0e49aff22c85888291282d6a3ac30cad567d5d854f2ee0140295aaffbf0  PROTOTYPES.cpp
+f11f6ff6067947d7d3b407cde62d61d11c48f4eb77a0454053bb2f4494c7f569  crypto_core/hsalsa20/ref/core.c
+1a1aeca46e7c21ffacc14e54fef6bfb83060de34add5ca736206b7817f8f3d44  crypto_core/hsalsa20/ref/api.h
 
 NaCl's `do` script generates the headers `crypto_core.h` and
-`crypto_core_salsa20.h` that core.c includes. ../headers.sh repeats the
-relevant part of `do` (SHA-256 of `do`:
+`crypto_core_salsa20.h` (or `crypto_core_hsalsa20.h`) that core.c includes.
+../headers.sh repeats the relevant part of `do` (SHA-256 of `do`:
 1e0aaf3039eb5810fbb8dc7de2f13c6dd996b38a2bffc78dcfd44170ab27c4fc)
-for o=crypto_core, p=salsa20, implementation crypto_core/salsa20/ref.
+for o=crypto_core, p=salsa20 or hsalsa20, implementation crypto_core/$p/ref.

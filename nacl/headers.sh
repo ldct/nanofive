@@ -1,13 +1,14 @@
 #!/bin/sh
-# Generate crypto_core.h and crypto_core_salsa20.h in the current directory, as
-# NaCl 20110221's `do` script does for the crypto_core/salsa20/ref implementation.
+# Usage: headers.sh PRIMITIVE IMPLEMENTATIONDIR, e.g. salsa20 crypto_core/salsa20/ref.
+# Generate crypto_core.h and crypto_core_PRIMITIVE.h in the current directory, as
+# NaCl 20110221's `do` script does for that crypto_core implementation.
 # The commands below are those of `do`, with its loop variables fixed. They read
 # api.h, MACROS, PROTOTYPES.c and PROTOTYPES.cpp from the current directory.
 set -eu
 o=crypto_core
-p=salsa20
+p=$1
 op=${o}_${p}
-implementationdir=crypto_core/salsa20/ref
+implementationdir=$2
 opi=`echo "$implementationdir" | tr ./- ___`
 	  (
 	    echo "#ifndef ${o}_H"

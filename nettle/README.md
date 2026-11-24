@@ -3,6 +3,7 @@
 `vendor/` contains unmodified files from GNU Nettle 3.10.2: `salsa20-core-internal.c`, which
 defines `_nettle_salsa20_core(uint32_t *dst, const uint32_t *src, unsigned rounds)`, and the
 headers it includes. See `vendor/SOURCES` for provenance and hashes.
+Nettle implements Salsa20 but not XSalsa20, so it has no HSalsa20 to prove.
 
 ```sh
 ./nettle/build.sh             # needs riscv64-unknown-elf-gcc and picolibc; or:

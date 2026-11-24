@@ -13,3 +13,5 @@ Files taken from the tarball (paths relative to libsodium-1.0.22/), SHA-256:
 f5f40276f7f06f3478750037c56b8e29b1717588b75bd1a3769ccc54f73a709a  src/libsodium/include/sodium/crypto_core_salsa208.h
 acc6ee537f831d535b0607be90f05150103765b7ca82170fd61a85bd5e6f73ff  src/libsodium/include/sodium/export.h
 9a652cc7be3ca2137e6126819bb403887c4d152b618be652be4708a618f18d3a  src/libsodium/include/sodium/private/common.h
+d9fdd18eeaaf6964ecb30eee30314a32abd10360c660af253cdab83826026a13  src/libsodium/crypto_core/hsalsa20/ref2/core_hsalsa20_ref2.c
+5f9d48c0cdfcb8ce86a0e65cfa490cac0e9cacbca4aa864926593c691f69be63  src/libsodium/include/sodium/crypto_core_hsalsa20.h

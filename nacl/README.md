@@ -1,21 +1,22 @@
-# NaCl's Salsa20 core on NanoFive
+# NaCl's Salsa20 and HSalsa20 cores on NanoFive
 
 `vendor/` contains unmodified files from the NaCl release 20110221: the reference
-implementation `crypto_core/salsa20/ref` and the inputs from which NaCl's `do` script
+implementations `crypto_core/salsa20/ref` and `crypto_core/hsalsa20/ref`, and the inputs from which NaCl's `do` script
 generates its headers. See `vendor/SOURCES` for provenance and hashes. `headers.sh` repeats
 that part of `do`.
 
 ```sh
 ./nacl/build.sh             # needs riscv64-unknown-elf-gcc; or, with Docker:
 docker run --rm -v "$PWD":/w -w /w nanofive-rvgcc ./nacl/build.sh
-python3 nacl/gen_lean.py    # regenerate lean/NaClSalsa20/Program.lean from the ELF
+python3 nacl/gen_lean.py    # regenerate the Program files of lean/NaClSalsa20 from the ELFs
 python3 nacl/nacl_test.py
 lake build NaClSalsa20
 ```
 
 The build uses the flags of `tweetnacl/build.sh` (GCC 13.2.0, RV64IM, LP64, `-O2`), and links
 `core.c` after the driver `start.S`. The driver reads 64 bytes from standard input, calls
-`crypto_core_salsa20_ref`, prints the 64 output bytes and exits 0.
+`crypto_core_salsa20_ref`, prints the 64 output bytes and exits 0. `hsalsa20/ref/core.c` is linked the same way after
+`start_hsalsa20.S`, which calls `crypto_core_hsalsa20_ref` and prints 32 bytes.
 
 ## Result
 
@@ -44,3 +45,16 @@ itself, as `tweetnacl/lean/TweetNaCl/ForHumans/Salsa20Result.lean` does for Twee
   `Salsa20Spec.core`, by `rfl`.
 * `Call.lean` checks, with `native_decide`, that both give each output byte the same normal
   form. `IO.lean` adds the driver, following `TweetNaCl.Salsa20IO`.
+
+## HSalsa20
+
+`ForHumans/HSalsa20IOResult.lean` proves `IsCorrect NaClSalsa20.HSalsa20.initial`, with
+`IsCorrect` from `tweetnacl/lean/TweetNaCl/ForHumans/HSalsa20IOSpec.lean` and HSalsa20 from
+`TweetNaCl/ForHumans/HSalsa20Spec.lean`. The run takes 2,587 instructions, 2,176 of them in
+the call. `ForHumans/HSalsa20Result.lean` states the call by itself.
+
+`hsalsa20/ref` adds the initial state back after the rounds and then subtracts the input and
+constant words again. GCC cancels the two, so the code is the same as for `hsalsa20/ref2`,
+which has no feed-forward. `HSalsa20Reference.lean` is therefore the spec over the same
+abstract algebra, and `HSalsa20Call.lean` and `HSalsa20IO.lean` are `Call.lean` and `IO.lean`
+with this function's output, addresses and counts.
