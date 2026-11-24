@@ -5,3 +5,5 @@ ratpoints/build/
 urlh/build/
 tweetnacl/build/
 nacl/build/
+libsodium/build/
+nettle/build/
